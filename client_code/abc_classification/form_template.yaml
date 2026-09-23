@@ -1,0 +1,332 @@
+components:
+- components:
+  - layout_properties: {grid_position: 'LWBRSG,MUFVYT'}
+    name: timer_check_task
+    properties: {interval: 0}
+    type: Timer
+  - components:
+    - layout_properties: {grid_position: 'MMKMUB,QUZYGM'}
+      name: lbl_last_review
+      properties:
+        font_size: 12
+        foreground: '#888888'
+        icon: fa:refresh
+        italic: true
+        role: input-prompt
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'Last Review: --'
+      type: Label
+    - event_bindings: {}
+      layout_properties: {grid_position: 'MMKMUB,OBWLKH'}
+      name: btn_refresh
+      properties:
+        icon: fa:refresh
+        role: elevated-button
+        spacing:
+          margin: ['0', '32', '0', '32']
+          padding: [null, '24', null, null]
+        text: Refresh
+      type: Button
+    - layout_properties: {grid_position: 'MMKMUB,ZSLVCF'}
+      name: btn_run_review
+      properties:
+        icon: ''
+        role: elevated-button
+        spacing:
+          margin: ['0', '20', '0', '20']
+        text: Run AI Review
+      type: Button
+    - layout_properties: {grid_position: 'MMKMUB,IKLKRJ'}
+      name: lbl_task_status
+      properties:
+        font_size: 12
+        spacing:
+          padding: [null, null, null, null]
+        visible: false
+      type: Label
+    layout_properties: {grid_position: 'RTQXKI,AOONRE'}
+    name: oc_header
+    properties:
+      role: outlined-card
+      spacing:
+        margin: ['0', null, null, null]
+        padding: [null, null, '10', null]
+    type: ColumnPanel
+  - components:
+    - layout_properties: {width: 250}
+      name: dd_status_filter
+      properties:
+        items: [All, Pending, Pending_Review, Approved, Rejected, Applied]
+      type: DropDown
+    - layout_properties: {width: 332}
+      name: tb_search
+      properties:
+        margin: ['0', null, '4', null]
+        placeholder: Search by SKU
+      type: TextBox
+    - layout_properties: {}
+      name: btn_clear_filters
+      properties:
+        icon: fa:times
+        icon_align: left
+        role: elevated-button
+        spacing:
+          margin: ['0', null, null, null]
+        text: Clear Filters
+      type: Button
+    - layout_properties: {}
+      name: btn_export
+      properties:
+        align: right
+        icon: fa:file-excel-o
+        role: elevated-button
+        spacing:
+          margin: ['0', null, null, null]
+        text: Export Excel
+      type: Button
+    layout_properties: {grid_position: 'HGFYVR,ORVWXZ'}
+    name: flow_filters
+    properties: {}
+    type: FlowPanel
+  - components:
+    - layout_properties: {}
+      name: lbl_pending_count
+      properties:
+        bold: true
+        border: '1px solid #FF9800'
+        foreground: '#FF9800'
+        spacing:
+          padding: ['0', '8', '0', '8']
+        text: 'Pending: 0'
+      type: Label
+    - layout_properties: {}
+      name: lbl_approved_count
+      properties:
+        bold: true
+        border: '1px solid #2196F3'
+        foreground: '#2196F3'
+        spacing:
+          padding: ['0', '8', '0', '8']
+        text: 'Approved: 0'
+      type: Label
+    - layout_properties: {}
+      name: lbl_rejected_count
+      properties:
+        bold: true
+        border: '1px solid #F44336'
+        foreground: '#F44336'
+        spacing:
+          padding: ['0', '8', '0', '8']
+        text: 'Rejected: 0'
+      type: Label
+    - layout_properties: {}
+      name: lbl_applied_count
+      properties:
+        bold: true
+        border: '1px solid #4CAF50'
+        foreground: '#4CAF50'
+        spacing:
+          padding: ['0', '8', '0', '8']
+        text: 'Applied: 0'
+      type: Label
+    - layout_properties: {}
+      name: lbl_record_count
+      properties:
+        font: ''
+        font_size: 12
+        foreground: '#888888'
+        icon: fa:arrow-right
+        spacing:
+          margin: ['0', null, null, null]
+        text: 0 Recommendations
+      type: Label
+    layout_properties: {grid_position: 'ROOCRC,GJAREC'}
+    name: flow_summary
+    properties: {}
+    type: FlowPanel
+  - components:
+    - name: rp_recommendations
+      properties: {item_template: abc_classification.ABCRowTemplate}
+      type: RepeatingPanel
+    layout_properties: {grid_position: 'VMSQWC,OBQDRR'}
+    name: dg_recommendations
+    properties:
+      columns:
+      - {data_key: sku, id: JKSDUP, title: SKU, width: '130'}
+      - {data_key: change_type, id: VJQQOR, title: Change Type, width: '120'}
+      - {data_key: current_classification, id: OJLQEN, title: Current Class, width: '100'}
+      - {data_key: new_classification, id: FZKGUP, title: New Class, width: '100'}
+      - {data_key: new_total_sold, id: NDINZK, title: Total Sold, width: '100'}
+      - {data_key: new_total_sold, id: JSGHOV, title: Running %, width: '90'}
+      - {data_key: confidence_level, id: KSUEYE, title: Confidence, width: '100'}
+      - {data_key: status, id: FTNITP, title: Status, width: '110'}
+      - {data_key: column_9, id: RDTJUO, title: Decision, width: '110'}
+      - {data_key: column_10, id: DGQQRR, title: Details, width: '70'}
+      role: [horizontal-scroll, tonal-data-grid]
+    type: DataGrid
+  - components:
+    - layout_properties: {grid_position: 'GUAVDQ,HLLJJV'}
+      name: btn_approve_all
+      properties:
+        role: elevated-button
+        spacing:
+          padding: ['0', '25', '0', '25']
+        text: Approve all Pending
+      type: Button
+    - layout_properties: {grid_position: 'GUAVDQ,HZXYAT'}
+      name: btn_reject_all
+      properties:
+        role: elevated-button
+        spacing:
+          padding: ['0', '25', '0', '25']
+        text: Reject all Pending
+      type: Button
+    - layout_properties: {grid_position: 'GUAVDQ,JFRSTF'}
+      name: btn_apply_decisions
+      properties:
+        role: elevated-button
+        spacing:
+          padding: ['0', '25', '0', '25']
+        text: Apply Decisons
+      type: Button
+    - layout_properties: {grid_position: 'GUAVDQ,DQKWQC'}
+      name: btn_apply_production
+      properties:
+        role: elevated-button
+        spacing:
+          padding: ['0', '25', '0', '25']
+        text: Apply to Production
+      type: Button
+    layout_properties: {grid_position: 'EUIJOY,UWBGQT'}
+    name: oc_footer
+    properties: {}
+    type: ColumnPanel
+  - components:
+    - layout_properties: {grid_position: 'MGQAJH,KMVMVN'}
+      name: lbl_sku_browser_title
+      properties: {bold: true, font_size: 16, icon: 'fa:search', text: SKU Browser}
+      type: Label
+    - layout_properties: {grid_position: 'MGQAJH,DJDKPW'}
+      name: tb_sku_search
+      properties: {font_size: 14, placeholder: Type SKU to search (min 2 chars)}
+      type: TextBox
+    - layout_properties: {grid_position: 'MGQAJH,WVRMJU'}
+      name: dd_sku_results
+      properties: {include_placeholder: true, placeholder: Select SKU, visible: false}
+      type: DropDown
+    - layout_properties: {grid_position: 'YZPVTT,HVNLQL AJKFKK,UHJXYG'}
+      name: lbl_sku_classification
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '00', null]
+        text: 'Classification: --'
+        visible: false
+      type: Label
+    - layout_properties: {grid_position: 'YZPVTT,HVNLQL IMSSUF,KRPMGD'}
+      name: lbl_sku_is_stocked
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'Is Stocked: --'
+        visible: false
+      type: Label
+    - layout_properties: {grid_position: 'YZPVTT,HVNLQL BCJSPC,IFHBCZ'}
+      name: lbl_sku_avg_daily
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'Avg Daily Usage: --'
+        visible: false
+      type: Label
+    - layout_properties: {grid_position: 'YZPVTT,HVNLQL KGWUWA,HCCWTW'}
+      name: lbl_sku_history_header
+      properties:
+        bold: true
+        italic: false
+        spacing:
+          margin: ['8', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: Recommendation History
+        underline: true
+        visible: false
+      type: Label
+    - layout_properties: {grid_position: 'YZPVTT,BXBIEB XQWTZO,WFXKDF'}
+      name: lbl_sku_total_sold
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'Total Sold: --'
+        visible: false
+      type: Label
+    - layout_properties: {grid_position: 'YZPVTT,BXBIEB JLGQDS,LWJJFP'}
+      name: lbl_sku_months_a
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'Months as A Item: --'
+        visible: false
+      type: Label
+    - layout_properties: {grid_position: 'YZPVTT,BXBIEB FTICGU,KVTCDN'}
+      name: lbl_sku_cv
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'CV: --'
+        visible: false
+      type: Label
+    - layout_properties: {grid_position: 'YZPVTT,UKYHUI UDSNYU,PSNQXC'}
+      name: lbl_sku_running_pct
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'Running Pct: --'
+        visible: false
+      type: Label
+    - layout_properties: {grid_position: 'YZPVTT,UKYHUI VXWSDK,DPRINY'}
+      name: lbl_sku_pattern
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'Pattern: --'
+        visible: false
+      type: Label
+    - layout_properties: {grid_position: 'JCVHLQ,CVICHG'}
+      name: rt_sku_history
+      properties:
+        spacing:
+          padding: ['0', '7', '0', null]
+      type: RichText
+    layout_properties: {grid_position: 'NSLYME,XGFQHZ'}
+    name: panel_sku_browser
+    properties: {col_widths: '{"KMVMVN":10,"DJDKPW":25,"WVRMJU":25}', role: outlined-card}
+    type: ColumnPanel
+  layout_properties: {slot: default}
+  name: content_panel
+  properties: {}
+  type: ColumnPanel
+- layout_properties: {slot: nav-right}
+  name: navbar_links
+  properties: {}
+  type: FlowPanel
+- layout_properties: {slot: title}
+  name: lb_title
+  properties: {role: title, text: ABC Classification Review}
+  type: Label
+- layout_properties: {slot: left-nav}
+  name: nav
+  properties: {}
+  type: form:NavSidebar
+container:
+  properties: {foreground: '#888888', html: '@theme:standard-page.html'}
+  type: HtmlTemplate
+is_package: true

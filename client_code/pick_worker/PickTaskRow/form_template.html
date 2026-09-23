@@ -1,0 +1,33 @@
+<anvil-form container="ColumnPanel">
+  <!-- One card per pick line; code sets card background grey/green/amber by status -->
+  <anvil-component type="ColumnPanel" name="cp_task_card" prop:role="outlined-card">
+    <!-- Row 1: SKU + quantity -->
+    <anvil-component type="Label" name="lbl_task_sku" prop:bold="true" prop:font_size="26" prop:spacing='{"padding":["0",null,"0",null]}'></anvil-component>
+    <anvil-component type="Label" name="lbl_task_qty" prop:bold="true" prop:font_size="26" prop:align="right" prop:spacing='{"padding":["0",null,"0",null]}'></anvil-component>
+    <!-- Row 2: LOCATION (biggest thing on the card) + description -->
+    <anvil-component type="Label" name="lbl_task_loc" prop:bold="true" prop:font_size="30" prop:foreground="#1565C0" prop:spacing='{"padding":["0",null,"0",null]}'></anvil-component>
+    <anvil-component type="Label" name="lbl_task_desc" prop:font_size="16" prop:foreground="#595959" prop:spacing='{"padding":["0",null,"0",null]}'></anvil-component>
+    <!-- Row 2b (v1.1.0): urgency chips - all Hub employees see urgency -->
+    <anvil-component type="FlowPanel" name="fp_task_urg">
+      <anvil-component type="Label" name="lbl_task_turg" prop:font_size="15" prop:bold="true"></anvil-component>
+      <anvil-component type="Label" name="lbl_task_iurg" prop:font_size="15" prop:bold="true"></anvil-component>
+    </anvil-component>
+    <!-- Row 3: action row -->
+    <anvil-component type="FlowPanel" name="fp_task_actions">
+      <anvil-component type="Button" name="btn_full" prop:text="✔ FULL QTY" prop:role="filled-button" prop:font_size="20"></anvil-component>
+      <anvil-component type="Button" name="btn_issue" prop:text="QTY / ISSUE" prop:role="outlined-button" prop:font_size="20"></anvil-component>
+      <anvil-component type="Label" name="lbl_task_result" prop:font_size="18"></anvil-component>
+      <anvil-component type="Link" name="lk_undo" prop:text="Undo" prop:visible="false"></anvil-component>
+    </anvil-component>
+    <!-- Row 4: issue entry (code fills fp_reasons with one toggle Button per reason) -->
+    <anvil-component type="ColumnPanel" name="cp_issue" prop:visible="false">
+      <anvil-component type="Label" name="lbl_issue_cap" prop:text="Actual quantity picked:" prop:spacing='{"padding":["0",null,"0",null]}'></anvil-component>
+      <anvil-component type="TextBox" name="tb_actual_qty" prop:type="number" prop:font_size="24" prop:align="left"></anvil-component>
+      <anvil-component type="FlowPanel" name="fp_reasons"></anvil-component>
+      <anvil-component type="FlowPanel" name="fp_issue_actions">
+        <anvil-component type="Button" name="btn_issue_save" prop:text="SAVE" prop:role="filled-button"></anvil-component>
+        <anvil-component type="Button" name="btn_issue_cancel" prop:text="CANCEL" prop:role="outlined-button"></anvil-component>
+      </anvil-component>
+    </anvil-component>
+  </anvil-component>
+</anvil-form>

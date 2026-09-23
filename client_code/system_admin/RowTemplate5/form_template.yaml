@@ -1,0 +1,19 @@
+components:
+- layout_properties: {column: JKSDUP}
+  name: lbl_module
+  properties: {}
+  type: Label
+- layout_properties: {column: VJQQOR}
+  name: lbl_version
+  properties: {}
+  type: Label
+- layout_properties: {column: OJLQEN}
+  name: lbl_date
+  properties: {}
+  type: Label
+- layout_properties: {column: RXPCQY}
+  name: lbl_notes
+  properties: {}
+  type: Label
+container: {type: DataRowPanel}
+is_package: true

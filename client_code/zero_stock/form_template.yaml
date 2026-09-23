@@ -1,0 +1,123 @@
+components:
+- components:
+  - components:
+    - layout_properties: {grid_position: 'BHJSWP,JRHAFJ'}
+      name: lbl_count
+      properties:
+        align: right
+        font_size: 10
+        foreground: '#888888'
+        icon: fa:arrow-right
+        italic: true
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['7', null, null, null]
+        text: 0 blocked at Hub
+      type: Label
+    - components:
+      - layout_properties: {width: 171}
+        name: txt_search_sku
+        properties:
+          font_size: 12
+          margin: ['0', null, '0', null]
+          placeholder: Search SKU
+        type: TextBox
+      - layout_properties: {width: 166.5}
+        name: dd_flag
+        properties:
+          font_size: 12
+          margin: ['0', null, '0', null]
+        type: DropDown
+      - layout_properties: {width: 179.5}
+        name: dd_sort
+        properties:
+          font_size: 12
+          margin: ['0', null, '0', null]
+        type: DropDown
+      layout_properties: {grid_position: 'HDRFLT,FILROW'}
+      name: flow_filters
+      properties: {align: left}
+      type: FlowPanel
+    - components:
+      - layout_properties: {}
+        name: btn_search
+        properties:
+          font_size: 12
+          icon: fa:search
+          role: elevated-button
+          spacing:
+            margin: ['0', null, '0', null]
+            padding: ['0', '20', '0', '20']
+          text: Search
+        type: Button
+      - layout_properties: {}
+        name: btn_export
+        properties:
+          font_size: 12
+          icon: fa:file-excel-o
+          role: elevated-button
+          spacing:
+            margin: ['0', null, '0', null]
+            padding: ['0', '20', '0', '20']
+          text: Export Excel/CSV
+        type: Button
+      layout_properties: {grid_position: 'HDRFLT,ACTROW'}
+      name: flow_actions
+      properties: {align: right}
+      type: FlowPanel
+    layout_properties: {grid_position: 'OCHEAD,HDRCRD'}
+    name: oc_header
+    properties:
+      col_widths: '{"FILROW":40,"ACTROW":20}'
+      role: outlined-card
+      spacing:
+        padding: ['10', null, '10', null]
+    type: ColumnPanel
+  - components:
+    - name: rp_zero
+      properties: {item_template: zero_stock.ZeroStockRowTemplate}
+      type: RepeatingPanel
+    layout_properties: {grid_position: 'DGGRID,GRDCEL'}
+    name: dg_zero
+    properties:
+      columns:
+      - {data_key: '', id: COLSKU, title: SKU, width: '120'}
+      - {data_key: '', id: COLABC, title: ABC, width: '60'}
+      - {data_key: '', id: COLFLG, title: Hub Flag, width: '80'}
+      - {data_key: '', id: COLDMD, title: Demand (Horizon), width: '85'}
+      - {data_key: '', id: COLTDM, title: Total Demand, width: '85'}
+      - {data_key: '', id: COLSHP, title: Earliest Ship, width: '90'}
+      - {data_key: '', id: COLTUR, title: Time Urgency, width: '95'}
+      - {data_key: '', id: COLIUR, title: Inventory Urgency, width: '95'}
+      - {data_key: '', id: COLSOH, title: Starlite OH, width: '85'}
+      - {data_key: '', id: COLSAV, title: Starlite Avail, width: '85'}
+      - {data_key: '', id: COLHOH, title: Hub OH, width: '85'}
+      margin: [null, '0', null, '0']
+      role: [tonal-data-grid, horizontal-scroll]
+      rows_per_page: 20
+    type: DataGrid
+  layout_properties: {slot: default}
+  name: content_panel
+  properties: {}
+  type: ColumnPanel
+- layout_properties: {slot: nav-right}
+  name: navbar_links
+  properties: {}
+  type: FlowPanel
+- layout_properties: {slot: title}
+  name: lbl_title
+  properties:
+    role: title
+    spacing:
+      margin: ['5', null, null, null]
+      padding: ['8', null, null, null]
+    text: Zero Stock
+  type: Label
+- layout_properties: {slot: left-nav}
+  name: nav
+  properties: {}
+  type: form:NavSidebar
+container:
+  properties: {html: '@theme:standard-page.html'}
+  type: HtmlTemplate
+is_package: true

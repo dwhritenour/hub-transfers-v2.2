@@ -1,0 +1,77 @@
+components:
+- data_bindings:
+  - {code: 'self.item[''sku'']', property: text, writeback: false}
+  layout_properties: {column: JKSDUP}
+  name: txt_sku
+  properties: {enabled: false, font_size: 12, foreground: '#000000'}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''current_min'']', property: text, writeback: false}
+  layout_properties: {column: VJQQOR}
+  name: txt_current_min
+  properties: {align: right, enabled: false, font_size: 12}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''current_max'']', property: text, writeback: false}
+  layout_properties: {column: OJLQEN}
+  name: txt_current_max
+  properties: {align: right, enabled: false, font_size: 12}
+  type: TextBox
+- data_bindings: []
+  layout_properties: {column: WNFQTW}
+  name: txt_rec_min
+  properties: {align: right, enabled: true, font: '', font_size: 12, tooltip: AI recommended Min. Edit to override.}
+  type: TextBox
+- data_bindings: []
+  layout_properties: {column: QVLJXV}
+  name: txt_rec_max
+  properties: {align: right, enabled: true, font: '', font_size: 12, tooltip: AI recommended Max. Edit to override.}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''min_pct_change'']', property: text, writeback: false}
+  layout_properties: {column: UEADMI}
+  name: txt_min_pct
+  properties: {align: right, enabled: false, font: '', font_size: 12}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''max_pct_change'']', property: text, writeback: false}
+  layout_properties: {column: ZEEULF}
+  name: txt_max_pct
+  properties: {align: right, enabled: false, font: '', font_size: 12}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''confidence_level'']', property: text, writeback: false}
+  layout_properties: {column: PIJUYD}
+  name: txt_confidence
+  properties: {align: right, enabled: false, font: '', font_size: 12}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''demand_pattern'']', property: text, writeback: false}
+  layout_properties: {column: TKKIDN}
+  name: txt_pattern
+  properties: {align: right, enabled: false, font: '', font_size: 12}
+  type: TextBox
+- layout_properties: {column: BCNVLZ}
+  name: link_details
+  properties: {font_size: 12, icon: 'fa:info-circle', text: View}
+  type: Link
+- layout_properties: {column: RVPJBG}
+  name: dd_decision
+  properties:
+    font_size: 14
+    include_placeholder: true
+    items: [Approve, Reject, Modify, '']
+    placeholder: Select
+  type: DropDown
+- data_bindings:
+  - {code: 'self.item[''status'']', property: text, writeback: false}
+  layout_properties: {column: VILVLI}
+  name: txt_status
+  properties: {align: right, enabled: false, font: '', font_size: 12}
+  type: TextBox
+- layout_properties: {column: CIQRWV}
+  name: tb_reason
+  properties: {font_size: 12, placeholder: Required when modifying, visible: false}
+  type: TextBox
+container: {type: DataRowPanel}
+is_package: true

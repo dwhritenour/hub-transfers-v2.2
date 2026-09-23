@@ -1,0 +1,173 @@
+components:
+- components:
+  - components:
+    - event_bindings: {}
+      layout_properties: {col_xs: 8, row: UNIDXP, width_xs: 3}
+      name: timer_check_task
+      properties: {interval: 0}
+      type: Timer
+    layout_properties: {grid_position: 'GAKFQR,XNIOSZ'}
+    name: gp_status
+    properties: {}
+    type: GridPanel
+  - components:
+    - layout_properties: {grid_position: 'ZQVAVH,APQPCT'}
+      name: lbl_last_run
+      properties:
+        font_size: 14
+        role: input-prompt
+        spacing:
+          margin: [null, null, '0', null]
+          padding: [null, null, '0', null]
+        text: 'Last Run:  '
+      type: Label
+    - event_bindings: {}
+      layout_properties: {grid_position: 'ZQVAVH,SQLOTM'}
+      name: btn_refresh
+      properties:
+        role: elevated-button
+        spacing:
+          padding: [null, '32', null, '32']
+        text: Refresh Stats
+      type: Button
+    - event_bindings: {}
+      layout_properties: {grid_position: 'ZQVAVH,QYMLWQ'}
+      name: btn_run_review
+      properties:
+        align: right
+        role: elevated-button
+        spacing:
+          margin: [null, '2', null, null]
+          padding: [null, '20', null, '20']
+        text: Run AI Review
+      type: Button
+    - layout_properties: {grid_position: 'XPWKVT,VEGRXX'}
+      name: lbl_stats
+      properties:
+        font_size: 14
+        role: input-prompt
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: 'Auto: Pending'
+      type: Label
+    - layout_properties: {grid_position: 'XPWKVT,EXKDGO'}
+      name: lbl_task_status
+      properties:
+        align: right
+        spacing:
+          margin: ['7', null, '0', null]
+          padding: ['0', null, '0', null]
+        visible: false
+      type: Label
+    layout_properties: {grid_position: 'BVBSCU,KPBQXJ'}
+    name: oc_header
+    properties: {col_widths: '{"APQPCT":50,"QYMLWQ":15,"SQLOTM":15,"VEGRXX":40,"EXKDGO":20}', role: outlined-card}
+    type: ColumnPanel
+  - components:
+    - components:
+      - layout_properties: {width: 244.5}
+        name: tb_filter_sku
+        properties:
+          margin: ['0', null, '0', null]
+          placeholder: Enter Part or All of SKU...
+        type: TextBox
+      - layout_properties: {width: 246.5}
+        name: dd_filter_status
+        properties:
+          margin: [null, null, '0', null]
+        type: DropDown
+      - layout_properties: {}
+        name: btn_filter_clear
+        properties:
+          role: elevated-button
+          spacing:
+            margin: ['0', null, '0', null]
+          text: Clear Filters
+        type: Button
+      - layout_properties: {}
+        name: lbl_filter_count
+        properties:
+          font_size: 12
+          foreground: '#595959'
+          italic: true
+          spacing:
+            margin: ['8', null, null, null]
+        type: Label
+      layout_properties: {grid_position: 'EQPPVX,HYUQUF'}
+      name: fp_filters
+      properties: {}
+      type: FlowPanel
+    layout_properties: {grid_position: 'CVHAJG,DNERNO'}
+    name: outlined_card_1
+    properties: {role: outlined-card}
+    type: ColumnPanel
+  - components:
+    - name: rp_transfers
+      properties: {item_template: transfer_recs.RowTemplate1}
+      type: RepeatingPanel
+    layout_properties: {full_width_row: false, grid_position: 'IREOGD,LQGUVJ'}
+    name: dg_transfers
+    properties:
+      auto_header: true
+      columns:
+      - {data_key: column_2, expand: false, id: VJQQOR, title: SKU, width: '136'}
+      - {data_key: column_3, expand: false, id: OJLQEN, title: Starlite Available, width: '94'}
+      - {data_key: column_1, expand: false, id: JKSDUP, title: Hub Available, width: '94'}
+      - {data_key: column_1, expand: false, id: QCVDBN, title: AI Quantity, width: '94'}
+      - {data_key: column_1, id: HMYNGM, title: Time Urgency}
+      - {data_key: column_2, id: PNOPFK, title: Inventory Urgency}
+      - {data_key: column_3, id: IBKNGQ, title: Status}
+      - {data_key: column_4, id: JUEAPG, title: Transfer Quantity, width: '94'}
+      - {data_key: column_5, id: ZZSKFW, title: Decision}
+      role: tonal-data-grid
+      rows_per_page: 20
+    type: DataGrid
+  - components:
+    - event_bindings: {}
+      layout_properties: {grid_position: 'DGIBWO,LKNJDS'}
+      name: btn_reject_all
+      properties:
+        align: right
+        role: elevated-button
+        spacing:
+          padding: [null, '25', null, '25']
+        text: Reject All
+      type: Button
+    - event_bindings: {}
+      layout_properties: {grid_position: 'DGIBWO,NSPMFO'}
+      name: btn_apply
+      properties:
+        align: right
+        role: elevated-button
+        spacing:
+          margin: [null, '2', null, null]
+          padding: [null, '30', null, '30']
+        text: 'Apply '
+      type: Button
+    layout_properties: {grid_position: 'YMMPYA,FIORJF'}
+    name: oc_footer
+    properties: {col_widths: '{"LKNJDS":50,"NSPMFO":10}', role: outlined-card}
+    type: ColumnPanel
+  layout_properties: {slot: default}
+  name: content_panel
+  properties: {col_widths: '{}'}
+  type: ColumnPanel
+- components: []
+  layout_properties: {slot: nav-right}
+  name: navbar_links
+  properties: {}
+  type: FlowPanel
+- layout_properties: {slot: title}
+  name: lb_title
+  properties: {bold: true, role: title, text: Hub Transfers v2.1}
+  type: Label
+- layout_properties: {slot: left-nav}
+  name: nav
+  properties: {}
+  type: form:NavSidebar
+container:
+  event_bindings: {}
+  properties: {html: '@theme:standard-page.html'}
+  type: HtmlTemplate
+is_package: true

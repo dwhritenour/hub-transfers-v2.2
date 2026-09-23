@@ -1,0 +1,100 @@
+components:
+- data_bindings:
+  - {code: 'self.item[''sku'']', property: text, writeback: false}
+  layout_properties: {column: VJQQOR}
+  name: txt_sku
+  properties: {enabled: false, font_size: 12, foreground: '#000000', role: null}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''starlite_available'']', property: text, writeback: false}
+  layout_properties: {column: OJLQEN}
+  name: txt_star_qty
+  properties: {align: right, enabled: false, font_size: 12, foreground: '#000000'}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''hub_available'']', property: text, writeback: false}
+  layout_properties: {column: JKSDUP}
+  name: txt_hub_qty
+  properties: {align: right, enabled: false, font_size: 12, foreground: '#000000'}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''demand_buckets'']', property: text, writeback: false}
+  layout_properties: {}
+  name: txt_demand_buckets
+  properties:
+    enabled: false
+    font_size: 12
+    foreground: '#000000'
+    margin: ['4', null, '0', null]
+    role: outlined
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''sales_orders'']', property: text, writeback: false}
+  layout_properties: {}
+  name: ta_sales_orders
+  properties:
+    auto_expand: true
+    enabled: false
+    font_size: 12
+    foreground: '#000000'
+    margin: ['4', null, '0', null]
+    role: outlined
+  type: TextArea
+- data_bindings:
+  - {code: 'self.item[''reasoning'']', property: text, writeback: false}
+  layout_properties: {}
+  name: ta_ai_reason
+  properties: {auto_expand: true, enabled: false, font_size: 12, foreground: '#000000', role: outlined}
+  type: TextArea
+- data_bindings: []
+  event_bindings: {}
+  layout_properties: {column: ZZSKFW}
+  name: dd_decision
+  properties:
+    font_size: 14
+    foreground: '#000000'
+    include_placeholder: true
+    items: [Approve, Reject, Pause]
+    placeholder: Select
+    role: null
+    underline: false
+  type: DropDown
+- data_bindings:
+  - {code: '', property: placeholder, writeback: false}
+  - {code: 'self.item[''ai_recommended_qty'']', property: text, writeback: false}
+  layout_properties: {column: QCVDBN}
+  name: txt_ai_qty
+  properties: {align: right, enabled: false, font_size: 12, foreground: '#000000', text: ''}
+  type: TextBox
+- data_bindings: []
+  event_bindings: {}
+  layout_properties: {column: JUEAPG}
+  name: trans_qty
+  properties: {align: right, font_size: 12, foreground: '#000000'}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''time_urgency'']', property: text, writeback: false}
+  layout_properties: {column: HMYNGM}
+  name: txt_time_urgency
+  properties: {enabled: false, font_size: 12, foreground: '#000000'}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''inventory_urgency'']', property: text, writeback: false}
+  layout_properties: {column: PNOPFK}
+  name: txt_inv_urgency
+  properties: {enabled: false, font_size: 12, foreground: '#000000'}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''status'']', property: text, writeback: false}
+  layout_properties: {column: IBKNGQ}
+  name: txt_status
+  properties: {enabled: false, font_size: 12, foreground: '#000000'}
+  type: TextBox
+- layout_properties: {column: ZZSKFW}
+  name: dp_snooze
+  properties: {font_size: 14, visible: false}
+  type: DatePicker
+container:
+  properties: {visible: true}
+  type: DataRowPanel
+is_package: true

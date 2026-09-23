@@ -1,0 +1,179 @@
+components:
+- components:
+  - components:
+    - layout_properties: {grid_position: 'EDSWSY,FBFOEI'}
+      name: lb_title
+      properties: {role: title, text: Hub to Starlite Global Parameters}
+      type: Label
+    - layout_properties: {grid_position: 'SFGILQ,HXVEPA HWFDQE,JKSEVV'}
+      name: lb_a_item_threshold
+      properties:
+        bold: false
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: A Item Threshold
+      type: Label
+    - layout_properties: {grid_position: 'SFGILQ,HXVEPA PWFTRP,UUQGEF'}
+      name: txt_a_item_threshold
+      properties: {}
+      type: TextBox
+    - layout_properties: {grid_position: 'SFGILQ,HXVEPA KBJYJA,EXGGFP'}
+      name: lb_service_level
+      properties:
+        bold: false
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: Service Level
+      type: Label
+    - layout_properties: {grid_position: 'SFGILQ,HXVEPA IVYMMN,BJDYWT'}
+      name: txt_service_level
+      properties: {}
+      type: TextBox
+    - layout_properties: {grid_position: 'SFGILQ,HXVEPA XVWRAR,WLGYSN'}
+      name: lbl_dashboard_url
+      properties:
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: Dashboard URL SMS
+      type: Label
+    - layout_properties: {grid_position: 'SFGILQ,HXVEPA DECKEU,QNKBKJ'}
+      name: txt_dashboard_url
+      properties: {}
+      type: TextBox
+    - layout_properties: {grid_position: 'SFGILQ,QXBIWD DYSPMR,CHUMEI'}
+      name: lb_lead_time
+      properties:
+        bold: false
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: Lead Time Days
+      type: Label
+    - layout_properties: {grid_position: 'SFGILQ,QXBIWD VORVMJ,EGMQMO'}
+      name: txt_lead_time
+      properties: {}
+      type: TextBox
+    - layout_properties: {grid_position: 'SFGILQ,QXBIWD IOCGGE,TRRILX'}
+      name: lb_transfer_horizon
+      properties:
+        bold: false
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: Transfer Planning Horizon
+      type: Label
+    - layout_properties: {grid_position: 'SFGILQ,QXBIWD XMREJP,WFFXTZ'}
+      name: txt_transfer_horizon
+      properties: {}
+      type: TextBox
+    - layout_properties: {grid_position: 'SFGILQ,XNPBAC KWELKB,AELYUF VFWRKE,QNSHZL'}
+      name: lb_cycle_review
+      properties:
+        bold: false
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: Cycle Review Days
+      type: Label
+    - layout_properties: {grid_position: 'SFGILQ,XNPBAC KWELKB,AELYUF JUZHUE,PCAZAM'}
+      name: txt_cycle_review
+      properties: {}
+      type: TextBox
+    - layout_properties: {grid_position: 'SFGILQ,XNPBAC KWELKB,AELYUF ATCJBX,MQJGMR'}
+      name: lb_truck_cap_ft3
+      properties:
+        bold: false
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: Truck Capacity (ft3)
+      type: Label
+    - layout_properties: {grid_position: 'SFGILQ,XNPBAC KWELKB,AELYUF ZQVJVN,FADRHM'}
+      name: txt_truck_cap_ft3
+      properties: {}
+      type: TextBox
+    - layout_properties: {grid_position: 'SFGILQ,XNPBAC KWELKB,JQNKBH DKLXYF,LHDNHU'}
+      name: lb_safety_days
+      properties:
+        bold: false
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: Safety Days
+      type: Label
+    - layout_properties: {grid_position: 'SFGILQ,XNPBAC KWELKB,JQNKBH RSEOEO,HIPOYL'}
+      name: txt_safety_days
+      properties: {}
+      type: TextBox
+    - layout_properties: {grid_position: 'SFGILQ,XNPBAC KWELKB,JQNKBH OUDXZW,SNNQLI'}
+      name: lb_truck_cap_vol
+      properties:
+        bold: false
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+        text: Truck Capacity (lb)
+      type: Label
+    - layout_properties: {grid_position: 'SFGILQ,XNPBAC KWELKB,JQNKBH WBNISN,WBHMEH'}
+      name: txt_truck_cap_vol
+      properties: {}
+      type: TextBox
+    - layout_properties: {grid_position: 'WFLMGU,LZMMQC'}
+      name: btn_apply
+      properties: {align: right, role: elevated-button, text: Apply All}
+      type: Button
+    layout_properties: {grid_position: 'QGMWWS,WPVXOP'}
+    name: cp_global_param
+    properties: {col_widths: '{"HXVEPA":20,"XNPBAC":40}', role: elevated-card}
+    type: ColumnPanel
+  - components:
+    - layout_properties: {grid_position: 'UORGUH,LQEWDY'}
+      name: lbl_versioins_title
+      properties: {bold: true, role: title, text: Server Module Versions}
+      type: Label
+    - layout_properties: {grid_position: 'UORGUH,TAVBSW'}
+      name: btn_refresh_versions
+      properties: {align: right, role: elevated-button, text: Refresh Versions}
+      type: Button
+    - components:
+      - layout_properties: {}
+        name: rp_versions
+        properties: {item_template: system_admin.RowTemplate5}
+        type: RepeatingPanel
+      layout_properties: {grid_position: 'AUHEMI,MANKLF'}
+      name: dg_versions
+      properties:
+        columns:
+        - {data_key: MODCOL, id: JKSDUP, title: Module, width: '220'}
+        - {data_key: VERCOL, id: VJQQOR, title: Version, width: '110'}
+        - {data_key: DTECOL, id: OJLQEN, title: Date, width: '130'}
+        - {data_key: NTSCOL, expand: true, id: RXPCQY, title: Notes, width: '400'}
+        role: tonal-data-grid
+      type: DataGrid
+    layout_properties: {grid_position: 'ZNCKAD,FVMACY'}
+    name: cp_versions
+    properties: {col_widths: '{"LQEWDY":40,"TAVBSW":20}', role: elevated-card}
+    type: ColumnPanel
+  layout_properties: {slot: default}
+  name: content_panel
+  properties: {}
+  type: ColumnPanel
+- layout_properties: {slot: nav-right}
+  name: navbar_links
+  properties: {}
+  type: FlowPanel
+- layout_properties: {slot: title}
+  name: label_1
+  properties: {role: title, text: System Admin Setting}
+  type: Label
+- layout_properties: {slot: left-nav}
+  name: nav
+  properties: {}
+  type: form:NavSidebar
+container:
+  properties: {html: '@theme:standard-page.html'}
+  type: HtmlTemplate
+is_package: true

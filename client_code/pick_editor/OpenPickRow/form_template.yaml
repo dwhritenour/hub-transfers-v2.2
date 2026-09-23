@@ -1,0 +1,43 @@
+components:
+- data_bindings: []
+  layout_properties: {column: OPK_PICK}
+  name: lbl_pick_id
+  properties: {}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: OPK_STATUS}
+  name: lbl_status
+  properties: {}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: OPK_WORKER}
+  name: lbl_worker
+  properties: {}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: OPK_PROG}
+  name: lbl_progress
+  properties: {align: right}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: OPK_SHORTS}
+  name: lbl_shorts
+  properties: {align: right}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: OPK_AGE}
+  name: lbl_age
+  properties: {align: right}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: OPK_CREATED}
+  name: lbl_created
+  properties: {}
+  type: Label
+- event_bindings: {}
+  layout_properties: {column: OPK_OPEN}
+  name: lk_open
+  properties: {text: Open}
+  type: Link
+container: {type: DataRowPanel}
+is_package: true

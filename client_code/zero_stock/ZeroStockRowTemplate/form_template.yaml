@@ -1,0 +1,47 @@
+components:
+- layout_properties: {column: COLSKU}
+  name: txt_sku
+  properties: {font_size: 12}
+  type: Label
+- layout_properties: {column: COLABC}
+  name: txt_abc
+  properties: {align: center, font_size: 12}
+  type: Label
+- layout_properties: {column: COLFLG}
+  name: txt_flag
+  properties: {font_size: 12}
+  type: Label
+- layout_properties: {column: COLDMD}
+  name: txt_demand
+  properties: {align: center, font_size: 12}
+  type: Label
+- layout_properties: {column: COLTDM}
+  name: txt_total_demand
+  properties: {align: center, font_size: 12}
+  type: Label
+- layout_properties: {column: COLSHP}
+  name: txt_ship
+  properties: {font_size: 12}
+  type: Label
+- layout_properties: {column: COLTUR}
+  name: txt_time_urg
+  properties: {align: center, font_size: 12}
+  type: Label
+- layout_properties: {column: COLIUR}
+  name: txt_inv_urg
+  properties: {align: center, font_size: 12}
+  type: Label
+- layout_properties: {column: COLSOH}
+  name: txt_star_oh
+  properties: {align: center, font_size: 12}
+  type: Label
+- layout_properties: {column: COLSAV}
+  name: txt_star_avail
+  properties: {align: center, font_size: 12}
+  type: Label
+- layout_properties: {column: COLHOH}
+  name: txt_hub_oh
+  properties: {align: center, font_size: 12}
+  type: Label
+container: {type: DataRowPanel}
+is_package: true

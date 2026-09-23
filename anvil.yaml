@@ -1,0 +1,73 @@
+allow_embedding: false
+correct_dependency_ids: {}
+dependencies: []
+metadata: {description: 'Allows approval, rejecting and editing transfers.', title: Hub Transfers v2.1}
+name: Clone of Hub Transfers v2.1
+package_name: Transfer_Dashboard
+renamed: true
+runtime_options:
+  client_version: '3'
+  legacy_features: {bootstrap3: true, class_names: true}
+  server_persist: true
+  server_spec: {base: python310-minimal}
+  version: 3
+scheduled_tasks:
+- job_id: HKKSITYC
+  task_name: run_transfer_review
+  time_spec:
+    at: {}
+    every: minute
+    n: 15
+- job_id: FGYJFMPC
+  task_name: run_pipeline_monitor
+  time_spec:
+    at: {}
+    every: minute
+    n: 10
+secrets:
+  ANTHROPIC_API_KEY:
+    type: secret
+    value: {AP5VZQ44L3ZYVZUS: bMdQY9TIxrp9E3T+RoDK72rZYnOrB7kDNavqjmJpl0VBLE0eDlRAI2OwTx+K/dg3KRPfWI5PvsZnMjWIKxbf4A3qjIawW9kwOGIifcDqBkWo1KUbLpxC26cDKbw2pMxa1FFvSxWvmUYdxn0dzE8Q8D6gdfDBbcD/JlYkX1deiGHX5u/P7QHDee8I1PmczvcKRH0z9bGYgd/eDlZK/4geCLZoI2wdOiAk5Zr+VsxAVSu/e0VxF98JalASPKZZJ6BXVhJHTka5rSXEiFg=, CKM4ICJV5P7F5XTZ: LKcCxRWypvsAMCTsWg5ci7C9W/EqYRJiXFBZqnxErXRnba0ZlQISMNjMX+fZNAJRS4QbH/la+KLJpJ10hFf2ab0aHbqqcwQYUTpQCwldIDsbLcGEup9ALWBePkAaMjDSW5R11HWvPjwMwB2a9po0+q6qH9Gnktz3QtiBV/y8UnQKUv30OsuRV8A5iKEB2RurgHvtRVRisLuq0TRSjh0vxOBQPwV7Y+uHA2TcbXNy458eMSS/2CP46YLzgCqtmARVRE2t/T9/J7Zns/Q=, YZKHSLAJLM2Q2MKE: 247LD/jLlghyaQpSK5fEbImgcdDeA/C83GC/X73lOLHOCcTLWHRc3RYsjw+EE3vLbSTKx5oWldUxNGMbcU19oR+qbiJ5+tzC9N+XYlWwwxu4Ruli6iGTw7IFxkWMFX4Ac8KkB3j6VqpzbpqiCsCkPEUTi/ExOegoW11D8wHAGBosLb9pcGYHZB/y9r+Ms7djzJVm5a1+Eud4+Ub2fXT8BDGzxQo+ljxe3wZ30fy/DFSJ9PEiFM4cdjjfAlmzfpIh1NmZrSNVnKet4kI=}
+  HUB_MANAGER_EMAIL:
+    type: secret
+    value: {AP5VZQ44L3ZYVZUS: tkIyqmQ7A8cpmJiF0G/X3WN7Rjq0eYzFqrdzopy7hE4jz5+h5nxmQyIKSvpLzBgjdXMUB3GS/AMrF7zSx2IkN4tZikXJNcb0hmlIOF6rpss93/ZAzff2wMlGhNeC5NHRFJ5ez2s9eWRISwTAY47BwMbukQbfE7j2HAw=, CKM4ICJV5P7F5XTZ: DL7A487BJPdDTQYlnmT6gh7f3fPBhK4lxzJgoPELL16GLhYDP5bDkLF76WHuWEISoVr6utbmfK7BePN2VQfYMHxM1u9OWS6IQm/0fLSdxlziQgcq4RqpfD8qy9yUEuFEoVUwAojflingUE1dvJmi/E3GEefUXvyAcqM=, YZKHSLAJLM2Q2MKE: p90NqDeOCG+FVg21jNubob6modKp6YD2PYzh9/qC7TBY99QO61eYqQAlSkB8qtQV5MYYPFRaSnHmEPsCG/yHC+416zoWi084lxZF7fXKBtqtdvhCYqkKtqdgvV/gPHyhZdhzzO+te3R2z+cz3gnFd1QV2u1PooE1WAE=}
+  NEXUS_DATABASE:
+    type: secret
+    value: {AP5VZQ44L3ZYVZUS: SHdLMvHMzq/OPP5UuZ+Jv4OAhM1bTCFyvkP/Divi7GSBswbeZ7i/pMTHLNG6FzYZorrGw4kyf5Mw0Of5c1H59BwnKonQ7QxrMThboa98No8tIWPjd8I2BF1Kzn8s6RhdhYW9ZA==, CKM4ICJV5P7F5XTZ: PfAk42TOTCFXB/LlIoteYv9nnV6mSB35+EepaS8DQuWG7jhkO2d6T53vtxKGwESNx+SvMIkX8mGKrpzhKA92T034TaLcyEVtDiMm5ujMKSfVpJFnEyZ//lar8raQn/nCdBuSpQ==, YZKHSLAJLM2Q2MKE: Of+7rp2I04IgVmkNv0fJxZIoPS2rqruvo5IO9qL6ZcwJ7rlmwNCYSllCcy2vZNik7rLsB0urypwRaRrJmFGH8a5AUl+dh9J/Dp8/31qA0i69/pxSQR4Ep8GkULQ9UR7/aMNjhQ==}
+  NEXUS_PASSWORD:
+    type: secret
+    value: {AP5VZQ44L3ZYVZUS: M62kZ8A+3yhducy6Kj6+U2tHBN7wKGWCCaLHwtce8t10Hbk6UQYvVbJURC0HQmimifUe83LoEKNdQihmp1TZiiVC+NgPNyJghMhh6FbfzgTGINvm5gmdhJWyy9ii0xQvXFCirCpYdSbPqRo=, CKM4ICJV5P7F5XTZ: LpwH5tfL2FDaH5bJefE7OcW3XIsiM5RyU07sCwtojw1fnVQzXA645YknrL4mE2sVddE7OB6PgStA1UsruzflCXbcJso/tiWeyeCPCfG67JsVyQZZr5hL93KVH1xdy0KLi9FGQQtkL9bhLOk=, YZKHSLAJLM2Q2MKE: pPm0WFJx0p0g5ZZ1Mkcb02x8+VCs7yu1DVsPsLMh+BjoP2LeCQwI5S4/Q/bawfi9GnkhEVB5Aq4B+xYeOT0fuubNZ4frlUH9O1OKD0PYVVzmrIO3HO+2oLJdqJcjE+CLll9yy+qrF327uAE=}
+  NEXUS_SERVER:
+    type: secret
+    value: {AP5VZQ44L3ZYVZUS: 1KVrf7MyafGcQqBTlrNtzSrtjwF0nS9Njmt2fnoHqyzHuI7h37Tuvbb+0BjRJbwOjT81zq7/J+sMwgsTR05/DM1rTNI1kXBuaF/LsydEjnadu56gSK0oViI1RbglGmtI1MKzXctcePqzwzkh, CKM4ICJV5P7F5XTZ: ymLL/5VOuScfG1xCl/7FYYFRFNR5mePpzrpDBKfbolghp19LTQmJYxdGizxxJ5HQ+tjTYEMycyPYjSxLzXFYv/oUl/3W3r5z4ZdZH6iUrwmm+LlUKECxc7G/xLI6b0WylcXxhsxujq7OGtHy, YZKHSLAJLM2Q2MKE: BFUV5Y9Z7gPF8vTYZG2tZk2bTvr/XfebxG5As6ucakCBFEM06j/g9EvDp7bwNKJie3bkAKfestoSEsl8POqpKo4ElAWTT1aAsGcM+fgKv5ZiNuKA5LHKiDa/UiDHWSNkarCNu/OqIaK7sbNG}
+  NEXUS_USERNAME:
+    type: secret
+    value: {AP5VZQ44L3ZYVZUS: r8fMaGOBHcnSadaKhR4XCGP6ZTd/EqY9SR29UbVWUx2svOL0SpyZoLWwvjKCDa+vMy3B91iVF+lL2aKOz5fCuVS55yc2S5Ia8TZY7c+wVwF7mpbefKaD7BSY4xMVir49sJvDjiP3Nn0=, CKM4ICJV5P7F5XTZ: q0alZYKDLUMbe5xWqnDojucl482p4EpdR4uAKOmsbSWsSHSKeqRTNnvqEDIDuCt2a7F4QdhyH9fTcx9GG+gZVBzb0hcPmJ/ETfqUhU2koWPc6+G79u0b39D9zOap1ZudLiD+nLfBRXw=, YZKHSLAJLM2Q2MKE: zYLEjwDzo2/a874i4gefbHa6Z2DqpxKAP20s9nryXa9RtsuUglM0ED2CXliNEP1R0hze2R3yQPc3YmAl+gKrFjxH0C++1bAXfQUSMccP0dGNlwtWZCNtp0i6ya/z4J3aYCODC1OnJA8=}
+  SMS_ENABLED:
+    type: secret
+    value: {AP5VZQ44L3ZYVZUS: KeR7K0GmwZaovtjRzCC3Bt87AVU81UMZGreQ+TiXcSTq8NDW53Yt04HjRe4r+ZmXvrERuOcQoLVs7LpEY5k/K87hD6XRTuXwgqfy5+Thf8gT7G6gTMmjmJWQvwBOmAxvOtzE, CKM4ICJV5P7F5XTZ: t1+SKI95p6RnQqJ6s2FCrY+zPYCqguP8oQatYhKaqf6Z+BtT4yKCnrKYwEZ4PgNY7bmFgcgZ4MzonQThayftffbEJKMCzcHDXZI2dUVl6ikIdWVQYXY5eed0BHYM+yP9Q4Ct}
+  SMS_TEST_MODE:
+    type: secret
+    value: {AP5VZQ44L3ZYVZUS: yuIBqunUA0BDL7IClvzlV7uZpD3Pa2yZul6HSIZyiyauwvrtQ4AZyAHU44WVtMkF9mIIQ+L2Q2iMjpguVU61xdTLeaLpZIhFg2aq+SOip5ttkb01pX1BQyark/c9K5/L/y2Ieg==, CKM4ICJV5P7F5XTZ: 11ur11ffUOFWUTkvJyfU6h6y5guh4e0PjLy/vvNVshfY7gsBm8UvF8vH9RZiPA3kboJOc+Pt6Krrj6sSd71hAUN7DxMapWlw2eHgC0SsHlIXb4fMXnqD9YYxCbIeCMGHKZAu0A==}
+  TWILIO_ACCOUNT_SID:
+    type: secret
+    value: {AP5VZQ44L3ZYVZUS: 6li/IShnqymygIxEsBRN4GC0ocIaSCkgLcb4E3NfzQrKmNo3paV1aZipKiG7/VQ4cmhcIDNH+DyxRcr+oLYyNG1lOhaw2RQ66MEKQ94VDWiQ7Xn/uU7EZ31gCqe0lI5ctuz7DvjYcbKhldttDlvSU2w6xzzfZafxzcVzSGPnSGPL, CKM4ICJV5P7F5XTZ: 85+t70ctImUw9s2lDKUydVV6LACRuN+lxnDwzhHHy1ONvtFONG+LSVU75j6AUFPcEhli9V6q32UntKhM7i1DtV6dtzgb74q2ce2AFbw6HdknhhPVAqQPZARjbWcawxRfZp3QyiyLCrGGWEfzz98C3HooV4Jwu7a85Kq5lz08/iRb, YZKHSLAJLM2Q2MKE: OMXERWHlTevXIuLDUOyXx81HRvbhGV98fkPQmr4a+VlgINJUgtWUF931cAzI7NYpREkHnZY6THW2PuiRTleAoKfZ7z2opsxwFdx3ZrxVYII+nqpxM4q5zLdiWy8maSn/cIeZ9lGnrt3ARrPwejTNAYFHVXQ3c1AjaHzY/Hs3xhVc}
+  TWILIO_AUTH_TOKEN:
+    type: secret
+    value: {AP5VZQ44L3ZYVZUS: KvhIpTYASsvJc1oZFtKcIaUo8oY2/AJCgwoGLaonBjBWu9K+Yyb6OlwFhRh67jxTjSad8pfXqC5Ph3f/Z6I/RHdiD2JwATW14h3ohm23tDzWOTlPANvRujK6xu9v+jzN609oz6q9KsgCVq1hWQaIq7t3J2f910PepwAPTDcxzw==, CKM4ICJV5P7F5XTZ: fh5a5v+Z3zmmxuSTT+RzLfps91IAZ5gXVEvQqdOp1i4MBZ8oqdxl5ZcRKpgW6HO2AfFtyRZqJWx5EPlemQrBPMPZaiaVZnEdZl7TCqANtkzMuH+MSFMX2aSW2ut0UVxd+G7JyWoepQz5T0A0FvgOwk1XxpcuZDUlrixbmWQZQA==, YZKHSLAJLM2Q2MKE: J/RPez6i5lJhyo6j9dC7gbHnFLw9uz9FvEG9OwS8FxSBQn8aZViyCWRbAROFmIS41Z+QBFf7UVrIEtyrZVfiBW2+3wP5ZFuz5nVKG3lffggZY8GY7X8CHKgfUKEwJJjxa39UOzHn8TlZEeE64hDlltRSD4cvFb0yZ2UGFRG1Pw==}
+  TWILIO_PHONE_NUMBER:
+    type: secret
+    value: {AP5VZQ44L3ZYVZUS: fxoFIpoBt/aD96YakKSOK0BybADgxVvt4Sm1p489B90kLP7g5BE4MwA1jBAT5kDugViXCr/zo/vF1Ss0qSQ+J3K7cNC0bYQ7Ugh3MP0shyQG/qLlTzZKlwwU6NU8BDLsL1/umZKD6OTh7R8=, CKM4ICJV5P7F5XTZ: NvRaKLHpt0NvNLraAn7Qkpn1vnBEypflrRDfHfYQAI8mZSK/8i8SXMI7RcMmrGiHBe/GVDZf/rwDN9uJ6TbaLyaOEuivEXH8Va7uSnwJkqVWAncP6p2sRcW5ugTMJZKVcK0rdA9/oQxnAoo=, YZKHSLAJLM2Q2MKE: rztKrbGDfQf1Sm9JvkExGnL8dN0cP99da1+VDYSfO+ka0kOQ/zrwbmmq9cHcfIymY+N3a+n9GVM4Cfv5CThp/g79BUE+Y0NWkx4xcYQcSSFzKTjxNXEftAlknDGNMyVLOT+R8VnWQTw1zQ4=}
+services:
+- client_config: {}
+  server_config: {}
+  source: /runtime/services/tables.yml
+- client_config: {}
+  server_config: {}
+  source: /runtime/services/anvil/email.yml
+- client_config: {}
+  server_config: {}
+  source: /runtime/services/anvil/secrets.yml
+startup: {module: transfer_recs, type: form}
+startup_form: null
+uplink_visible: true

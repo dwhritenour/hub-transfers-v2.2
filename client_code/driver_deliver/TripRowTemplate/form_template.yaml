@@ -1,0 +1,41 @@
+components:
+- components:
+  - components:
+    - layout_properties: {grid_position: 'FFLKNT,ARUDVQ'}
+      name: lbl_title
+      properties:
+        bold: true
+        font_size: null
+        role: input-prompt
+        spacing:
+          margin: ['0', null, '0', null]
+      type: Label
+    - layout_properties: {grid_position: 'FHBXNI,TQJXDU'}
+      name: lbl_sub
+      properties:
+        role: null
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['0', null, '0', null]
+      type: Label
+    - layout_properties: {grid_position: 'PORETE,PRUPDE'}
+      name: btn_select
+      properties:
+        align: left
+        icon: fa:bolt
+        role: outlined-button
+        spacing:
+          margin: ['8', null, '4', '4']
+          padding: ['10', null, '8', null]
+        text: Deliver
+      type: Button
+    layout_properties: {width: 1004}
+    name: cp_info
+    properties: {}
+    type: ColumnPanel
+  layout_properties: {grid_position: 'MGJHCF,LUHCSW'}
+  name: fp_row
+  properties: {align: justify}
+  type: FlowPanel
+container: {type: ColumnPanel}
+is_package: true

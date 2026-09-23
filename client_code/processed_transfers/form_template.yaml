@@ -1,0 +1,135 @@
+components:
+- components:
+  - components:
+    - layout_properties: {grid_position: 'HAFLRZ,DYYHDJ'}
+      name: lbl_count
+      properties:
+        align: right
+        font_size: 10
+        foreground: '#888888'
+        icon: fa:arrow-right
+        italic: true
+        spacing:
+          margin: ['0', null, '0', null]
+          padding: ['7', null, null, null]
+        text: 0 processed
+      type: Label
+    - components:
+      - layout_properties: {width: 220}
+        name: txt_search_sku
+        properties:
+          font_size: 12
+          margin: ['0', null, '0', null]
+          placeholder: SKU...
+        type: TextBox
+      - layout_properties: {}
+        name: dp_date_from
+        properties:
+          font_size: 12
+          margin: ['0', null, '0', null]
+          placeholder: From
+        type: DatePicker
+      - layout_properties: {}
+        name: dp_date_to
+        properties:
+          font_size: 12
+          margin: ['0', null, '0', null]
+          placeholder: To
+        type: DatePicker
+      - layout_properties: {width: 219.5}
+        name: dd_status
+        properties:
+          font_size: 12
+          items: [All]
+          margin: ['0', null, '0', null]
+        type: DropDown
+      - layout_properties: {width: 171.5}
+        name: dd_sort
+        properties:
+          font_size: 12
+          margin: ['0', null, '0', null]
+        type: DropDown
+      layout_properties: {grid_position: 'HDRFLT,FILROW'}
+      name: flow_filters
+      properties: {align: left}
+      type: FlowPanel
+    - components:
+      - layout_properties: {}
+        name: btn_search
+        properties:
+          font_size: 12
+          icon: fa:search
+          role: elevated-button
+          spacing:
+            margin: ['0', null, '0', null]
+            padding: ['0', '20', '0', '20']
+          text: Search SKU
+        type: Button
+      - layout_properties: {}
+        name: btn_export
+        properties:
+          font_size: 12
+          icon: fa:file-excel-o
+          role: elevated-button
+          spacing:
+            margin: ['0', null, '0', null]
+            padding: ['0', '20', '0', '20']
+          text: Export Excel/CSV
+        type: Button
+      layout_properties: {grid_position: 'HDRFLT,ACTROW'}
+      name: flow_actions
+      properties: {align: right}
+      type: FlowPanel
+    layout_properties: {grid_position: 'OCHEAD,HDRCRD'}
+    name: oc_header
+    properties:
+      col_widths: '{"FILROW":40,"ACTROW":20}'
+      role: outlined-card
+      spacing:
+        padding: ['10', null, '10', null]
+    type: ColumnPanel
+  - components:
+    - name: rp_processed
+      properties: {item_template: processed_transfers.ProcessedRowTemplate}
+      type: RepeatingPanel
+    layout_properties: {grid_position: 'DGGRID,GRDCEL'}
+    name: dg_processed
+    properties:
+      columns:
+      - {data_key: '', id: COLSKU, title: SKU, width: '120'}
+      - {data_key: '', id: COLSDT, title: Status Date, width: '130'}
+      - {data_key: '', id: COLSTA, title: Status, width: '120'}
+      - {data_key: '', id: COLOQT, title: Orig Qty, width: '90'}
+      - {data_key: '', id: COLAQT, title: Alt Qty, width: '90'}
+      - {data_key: '', id: COLBAT, title: Batch, width: '170'}
+      - {data_key: '', id: COLTRP, title: Trip, width: '90'}
+      - {data_key: '', id: COLNOT, title: Note, width: '150'}
+      margin: [null, '0', null, '0']
+      role: [tonal-data-grid, horizontal-scroll]
+      rows_per_page: 20
+    type: DataGrid
+  layout_properties: {slot: default}
+  name: content_panel
+  properties: {}
+  type: ColumnPanel
+- layout_properties: {slot: nav-right}
+  name: navbar_links
+  properties: {}
+  type: FlowPanel
+- layout_properties: {slot: title}
+  name: lbl_title
+  properties:
+    role: title
+    spacing:
+      margin: ['5', null, null, null]
+      padding: ['8', null, null, null]
+    text: Processed SKUs
+  type: Label
+- layout_properties: {slot: left-nav}
+  name: nav
+  properties: {}
+  type: form:NavSidebar
+container:
+  properties: {html: '@theme:standard-page.html'}
+  type: HtmlTemplate
+is_package: true

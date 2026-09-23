@@ -1,0 +1,168 @@
+components:
+- components:
+  - components:
+    - layout_properties: {grid_position: 'PKR1AA,PKC1AA'}
+      name: lbl_picks_title
+      properties: {bold: true, text: Open Picks}
+      type: Label
+    - layout_properties: {grid_position: 'PKR1AA,PKC1AB'}
+      name: cb_show_completed
+      properties: {text: Show recent completed (for Reopen)}
+      type: CheckBox
+    - event_bindings: {}
+      layout_properties: {grid_position: 'PKR1AA,PKC1AC'}
+      name: btn_new_pick
+      properties: {role: elevated-button, text: New Pick}
+      type: Button
+    - event_bindings: {}
+      layout_properties: {grid_position: 'PKR1AA,PKC1AD'}
+      name: btn_refresh
+      properties: {role: elevated-button, text: Refresh}
+      type: Button
+    - components:
+      - data_bindings: []
+        name: rp_open_picks
+        properties: {item_template: pick_editor.OpenPickRow}
+        type: RepeatingPanel
+      layout_properties: {grid_position: 'PKR2AA,PKC2AA'}
+      name: dg_open_picks
+      properties:
+        columns:
+        - {data_key: PICK, id: OPK_PICK, title: 'Pick #', width: '90'}
+        - {data_key: STATUS, id: OPK_STATUS, title: Status, width: '110'}
+        - {data_key: WORKER, id: OPK_WORKER, title: Worker, width: '150'}
+        - {data_key: PROG, id: OPK_PROG, title: Progress, width: '100'}
+        - {data_key: SHORTS, id: OPK_SHORTS, title: Shorts, width: '100'}
+        - {data_key: AGE, id: OPK_AGE, title: Age, width: '150'}
+        - {data_key: CREATED, id: OPK_CREATED, title: Created, width: '160'}
+        - {data_key: OPEN, id: OPK_OPEN, title: '', width: '70'}
+        role: tonal-data-grid
+      type: DataGrid
+    layout_properties: {grid_position: 'AAAAAA,AAAAAB'}
+    name: cp_picks
+    properties: {col_widths: '{"PKC1AA":10,"PKC1AB":30,"PKC1AC":10,"PKC1AD":10}', role: outlined-card}
+    type: ColumnPanel
+  - components:
+    - layout_properties: {grid_position: 'POR1AA,POC1AA'}
+      name: lbl_pool_title
+      properties: {bold: true, text: Unassigned Pool}
+      type: Label
+    - layout_properties: {grid_position: 'POR1AA,POC1AB'}
+      name: tb_pool_search
+      properties: {placeholder: 'Filter SKU / Rec # / location'}
+      type: TextBox
+    - layout_properties: {grid_position: 'POR1AA,POC1AC'}
+      name: cb_pool_select_all
+      properties: {text: Select All}
+      type: CheckBox
+    - event_bindings: {}
+      layout_properties: {grid_position: 'POR1AA,POC1AD'}
+      name: btn_add_selected
+      properties: {role: elevated-button, text: Add Selected → Pick}
+      type: Button
+    - components:
+      - data_bindings: []
+        layout_properties: {}
+        name: rp_pool
+        properties:
+          item_template: pick_editor.PoolRow
+          margin: ['0', null, '0', null]
+        type: RepeatingPanel
+      layout_properties: {grid_position: 'POR2AA,POC2AA'}
+      name: dg_pool
+      properties:
+        columns:
+        - {data_key: SEL, id: POL_SEL, title: ✓, width: '50'}
+        - {data_key: REC, id: POL_REC, title: 'Rec #', width: '70'}
+        - {data_key: SKU, id: POL_SKU, title: SKU, width: '110'}
+        - {data_key: LOC, id: POL_LOC, title: Location, width: '85'}
+        - {data_key: REQ, id: POL_REQ, title: Request, width: '80'}
+        - {data_key: APPR, id: POL_APPR, title: Approve, width: '80'}
+        - {data_key: ASSND, id: POL_ASSND, title: Assign, width: '75'}
+        - {data_key: REM, id: POL_REM, title: Remain, width: '75'}
+        - {data_key: QTY, id: POL_QTY, title: Qty to Assign, width: '90'}
+        - {data_key: URG, id: POL_URG, title: Urgency, width: '80'}
+        - {data_key: AGE, id: POL_AGE, title: Approved On, width: '130'}
+        role: [tonal-data-grid, horizontal-scroll]
+      type: DataGrid
+    layout_properties: {grid_position: 'BBBBBB,BBBBBC'}
+    name: cp_pool
+    properties: {col_widths: '{"POC1AA":10,"POC1AB":30,"POC1AC":10,"POC1AD":15}', role: outlined-card}
+    type: ColumnPanel
+  - components:
+    - layout_properties: {grid_position: 'PIR1AA,PIC1AA'}
+      name: lbl_pick_title
+      properties: {bold: true, text: No pick selected}
+      type: Label
+    - layout_properties: {grid_position: 'PIR1AA,PIC1AB'}
+      name: lbl_pick_status
+      properties: {align: center}
+      type: Label
+    - event_bindings: {}
+      layout_properties: {grid_position: 'PIR1AA,PIC1AC'}
+      name: dd_worker
+      properties: {include_placeholder: true, placeholder: Assign worker…}
+      type: DropDown
+    - components:
+      - event_bindings: {}
+        layout_properties: {}
+        name: btn_release
+        properties: {role: elevated-button, text: Release}
+        type: Button
+      - event_bindings: {}
+        layout_properties: {}
+        name: btn_print_slip
+        properties: {role: elevated-button, text: Print Pick Slip}
+        type: Button
+      - event_bindings: {}
+        layout_properties: {}
+        name: btn_reopen
+        properties: {role: outlined-button, text: Reopen}
+        type: Button
+      - event_bindings: {}
+        layout_properties: {}
+        name: btn_cancel_pick
+        properties: {role: outlined-button, text: Cancel Pick}
+        type: Button
+      layout_properties: {grid_position: 'PIR2AA,PIC2AA'}
+      name: fp_pick_actions
+      properties: {align: right}
+      type: FlowPanel
+    - components:
+      - data_bindings: []
+        name: rp_pick_lines
+        properties: {item_template: pick_editor.PickLineRow}
+        type: RepeatingPanel
+      layout_properties: {grid_position: 'PIR3AA,PIC3AA'}
+      name: dg_pick_lines
+      properties:
+        columns:
+        - {data_key: SKU, id: PLN_SKU, title: SKU, width: '150'}
+        - {data_key: LOC, id: PLN_LOC, title: Location, width: '150'}
+        - {data_key: QTY, id: PLN_QTY, title: Qty, width: '100'}
+        - {data_key: STATUS, id: PLN_STATUS, title: Status, width: '150'}
+        - {data_key: PICKED, id: PLN_PICKED, title: Picked, width: '125'}
+        - {data_key: BY, id: PLN_BY, title: By, width: '180'}
+        - {data_key: REM, id: PLN_REM, title: '', width: '80'}
+        role: tonal-data-grid
+      type: DataGrid
+    layout_properties: {grid_position: 'CCCCCC,CCCCCD'}
+    name: cp_pick
+    properties: {col_widths: '{"PIC1AA":20,"PIC1AB":20,"PIC1AC":20}', role: outlined-card}
+    type: ColumnPanel
+  layout_properties: {slot: default}
+  name: content_panel
+  properties: {}
+  type: ColumnPanel
+- layout_properties: {slot: title}
+  name: lbl_title
+  properties: {role: title, text: Pick Editor}
+  type: Label
+- layout_properties: {slot: left-nav}
+  name: nav
+  properties: {}
+  type: form:NavSidebar
+container:
+  properties: {html: '@theme:standard-page.html'}
+  type: HtmlTemplate
+is_package: true

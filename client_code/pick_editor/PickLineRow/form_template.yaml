@@ -1,0 +1,38 @@
+components:
+- data_bindings: []
+  layout_properties: {column: PLN_SKU}
+  name: lbl_sku
+  properties: {}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: PLN_LOC}
+  name: lbl_loc
+  properties: {align: right}
+  type: Label
+- event_bindings: {}
+  layout_properties: {column: PLN_QTY}
+  name: tb_qty
+  properties: {align: right, type: number}
+  type: TextBox
+- data_bindings: []
+  layout_properties: {column: PLN_STATUS}
+  name: lbl_status
+  properties: {}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: PLN_PICKED}
+  name: lbl_picked
+  properties: {align: right}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: PLN_BY}
+  name: lbl_picked_by
+  properties: {}
+  type: Label
+- event_bindings: {}
+  layout_properties: {column: PLN_REM}
+  name: lk_remove
+  properties: {text: Remove}
+  type: Link
+container: {type: DataRowPanel}
+is_package: true

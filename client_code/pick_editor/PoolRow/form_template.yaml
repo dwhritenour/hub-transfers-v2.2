@@ -1,0 +1,70 @@
+components:
+- layout_properties: {column: POL_SEL}
+  name: cb_selected
+  properties: {align: center, checked: false, text: ''}
+  type: CheckBox
+- data_bindings: []
+  layout_properties: {column: POL_REC}
+  name: lbl_rec_id
+  properties: {}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: POL_SKU}
+  name: lbl_sku
+  properties: {}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: POL_LOC}
+  name: lbl_loc
+  properties: {align: left}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: POL_REQ}
+  name: lbl_req
+  properties: {align: right}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: POL_APPR}
+  name: lbl_appr
+  properties: {align: right}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: POL_ASSND}
+  name: lbl_assigned
+  properties: {align: right}
+  type: Label
+- data_bindings: []
+  layout_properties: {column: POL_REM}
+  name: lbl_remaining
+  properties: {align: right}
+  type: Label
+- event_bindings: {}
+  layout_properties: {column: POL_QTY}
+  name: tb_assign_qty
+  properties: {align: right, type: number}
+  type: TextBox
+- data_bindings: []
+  layout_properties: {column: POL_URG}
+  name: lbl_urgency
+  properties: {}
+  type: Label
+- components:
+  - data_bindings: []
+    layout_properties: {}
+    name: lbl_age
+    properties: {}
+    type: Label
+  - layout_properties: {}
+    name: lk_remove
+    properties:
+      icon: fa:close
+      spacing:
+        margin: ['12', null, null, '10']
+      text: ''
+    type: Link
+  layout_properties: {column: POL_AGE}
+  name: flow_panel_1
+  properties: {}
+  type: FlowPanel
+container: {type: DataRowPanel}
+is_package: true

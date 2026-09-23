@@ -1,0 +1,63 @@
+components:
+- data_bindings:
+  - {code: 'self.item[''sku'']', property: text, writeback: false}
+  layout_properties: {column: JKSDUP}
+  name: txt_sku
+  properties: {enabled: false, font_size: 12, foreground: '#000000'}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''change_type'']', property: text, writeback: false}
+  layout_properties: {column: VJQQOR}
+  name: txt_change_type
+  properties: {align: right, enabled: false, font_size: 12}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''current_classification'']', property: text, writeback: false}
+  layout_properties: {column: OJLQEN}
+  name: txt_current_class
+  properties: {align: right, enabled: false, font_size: 12}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''new_classification'']', property: text, writeback: false}
+  layout_properties: {column: FZKGUP}
+  name: txt_new_class
+  properties: {align: right, enabled: false, font_size: 12}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''new_total_sold'']', property: text, writeback: false}
+  layout_properties: {column: NDINZK}
+  name: txt_total_sold
+  properties: {align: right, enabled: false, font_size: 12}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''new_running_pct'']', property: text, writeback: false}
+  layout_properties: {column: JSGHOV}
+  name: txt_running_pct
+  properties: {align: right, enabled: false, font_size: 12}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''confidence_level'']', property: text, writeback: false}
+  layout_properties: {column: KSUEYE}
+  name: txt_confidence
+  properties: {align: right, enabled: false, font_size: 12}
+  type: TextBox
+- data_bindings:
+  - {code: 'self.item[''status'']', property: text, writeback: false}
+  layout_properties: {column: FTNITP}
+  name: txt_status
+  properties: {align: right, enabled: false, font_size: 12}
+  type: TextBox
+- layout_properties: {column: RDTJUO}
+  name: dd_decision
+  properties:
+    font_size: 14
+    include_placeholder: true
+    items: [Approve, Reject]
+    placeholder: Select
+  type: DropDown
+- layout_properties: {column: DGQQRR}
+  name: link_details
+  properties: {font_size: 12, icon: 'fa:info-circle', text: View}
+  type: Link
+container: {type: DataRowPanel}
+is_package: true

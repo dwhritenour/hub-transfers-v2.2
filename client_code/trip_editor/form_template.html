@@ -1,0 +1,48 @@
+<anvil-form container="ColumnPanel">
+  <anvil-component type="ColumnPanel" name="cp_dock_root" prop:spacing='{"padding":[null,"24",null,"24"]}'>
+    <!-- Top bar -->
+    <anvil-component type="ColumnPanel" name="cp_dock_topbar" prop:role="outlined-card" prop:col_widths='"{\"AOEEYW\":45,\"DKTOPB\":55,\"QZOTWG\":20}"'>
+      <anvil-component type="Label" name="lbl_dock_title" prop:text="Dock — Trip Editor" prop:bold="true" prop:role="headline" container:grid_position="LJZOTC,AOEEYW"></anvil-component>
+      <anvil-component type="FlowPanel" name="fp_buttons" prop:align="right" container:grid_position="LJZOTC,QZOTWG">
+        <anvil-component type="Button" name="btn_dock_refresh" prop:text="Refresh" prop:role="elevated-button" prop:align="right"></anvil-component>
+        <anvil-component type="Button" name="btn_dock_home" prop:text="Home" prop:role="elevated-button" prop:align="right" prop:spacing='{"padding":[null,"28",null,"28"]}'></anvil-component>
+      </anvil-component>
+      <anvil-component type="FlowPanel" name="fp_dock_top" prop:align="left" container:grid_position="DKTOPA,DKTOPB">
+        <anvil-component type="Label" name="lbl_dock_worker" prop:bold="true" prop:align="left"></anvil-component>
+        <anvil-component type="DropDown" name="dd_dock_worker" prop:include_placeholder="true" prop:placeholder="Select your name..." container:width="438.5"></anvil-component>
+      </anvil-component>
+    </anvil-component>
+    <!-- PANEL A: STAGED pool + truck planning -->
+    <anvil-component type="ColumnPanel" name="cp_dock_staged" prop:visible="false">
+      <anvil-component type="ColumnPanel" name="cp_staged_head" prop:role="outlined-card">
+        <anvil-component type="Label" name="lbl_staged_title" prop:bold="true" prop:font_size="20" prop:spacing='{"margin":["5",null,"5",null],"padding":["0",null,"0",null]}'></anvil-component>
+        <anvil-component type="Label" name="lbl_util_vol" prop:font_size="16" prop:bold="true" prop:spacing='{"margin":["0",null,"0",null],"padding":["0",null,"0",null]}'></anvil-component>
+        <anvil-component type="Label" name="lbl_util_wt" prop:font_size="16" prop:bold="true" prop:spacing='{"margin":["0",null,"15",null],"padding":["0",null,"0",null]}'></anvil-component>
+        <anvil-component type="FlowPanel" name="fp_staged_actions">
+          <anvil-component type="Button" name="btn_run_opt" prop:text="RUN OPTIMIZER" prop:role="outlined-button" prop:visible="false"></anvil-component>
+          <anvil-component type="Button" name="btn_consolidate" prop:text="CONSOLIDATE" prop:role="outlined-button" prop:visible="false"></anvil-component>
+          <anvil-component type="Button" name="btn_select_none" prop:text="CLEAR SELECTION" prop:role="outlined-button"></anvil-component>
+          <anvil-component type="Button" name="btn_finalize_truck" prop:text="FINALIZE TRUCK" prop:role="filled-button" prop:font_size="16"></anvil-component>
+        </anvil-component>
+      </anvil-component>
+      <anvil-component type="Label" name="lbl_no_staged" prop:text="Nothing is staged for transfer right now." prop:visible="false" prop:italic="true"></anvil-component>
+      <anvil-component type="DataGrid" name="dg_staged" prop:role="tonal-data-grid" prop:rows_per_page="500" prop:columns='[{"id":"sel","title":"✓","data_key":"","width":"50"},{"id":"sku","title":"SKU","data_key":"sku","width":"130"},{"id":"qty","title":"Qty","data_key":"qty_disp","width":"55"},{"id":"wt","title":"Lb","data_key":"wt_disp","width":"75"},{"id":"vol","title":"Ft3","data_key":"vol_disp","width":"70"},{"id":"pick","title":"Pick","data_key":"pick_disp","width":"80"},{"id":"age","title":"Staged","data_key":"","width":"100"},{"id":"turg","title":"Time Urgency","data_key":"","width":"130"},{"id":"iurg","title":"Inv Urgency","data_key":"","width":"120"},{"id":"loc","title":"Location","data_key":"loc_disp","width":"100"}]'>
+        <anvil-component type="RepeatingPanel" name="rp_dock_staged" prop:item_template="trip_editor.DockStagedRow"></anvil-component>
+      </anvil-component>
+    </anvil-component>
+    <!-- PANEL B: the open truck (finalized, loading) -->
+    <anvil-component type="ColumnPanel" name="cp_dock_load" prop:visible="false">
+      <anvil-component type="ColumnPanel" name="cp_load_head" prop:role="outlined-card">
+        <anvil-component type="Label" name="lbl_truck_title" prop:bold="true" prop:font_size="20"></anvil-component>
+        <anvil-component type="Label" name="lbl_truck_sub" prop:foreground="#595959"></anvil-component>
+        <anvil-component type="FlowPanel" name="fp_load_actions">
+          <anvil-component type="Button" name="btn_manifest" prop:text="MANIFEST (PDF)" prop:role="outlined-button"></anvil-component>
+          <anvil-component type="Button" name="btn_depart" prop:text="TRUCK DEPARTED" prop:role="filled-button" prop:font_size="16"></anvil-component>
+        </anvil-component>
+      </anvil-component>
+      <anvil-component type="DataGrid" name="dg_load" prop:role="tonal-data-grid" prop:rows_per_page="500" prop:columns='[{"id":"sku","title":"SKU","data_key":"sku","width":"130"},{"id":"qty","title":"Qty","data_key":"qty_disp","width":"55"},{"id":"wt","title":"Lb","data_key":"wt_disp","width":"75"},{"id":"vol","title":"Ft3","data_key":"vol_disp","width":"70"},{"id":"turg","title":"Time Urg","data_key":"","width":"100"},{"id":"iurg","title":"Inv Urg","data_key":"","width":"110"},{"id":"actions","title":"Load","data_key":"","width":"380"}]'>
+        <anvil-component type="RepeatingPanel" name="rp_dock_load" prop:item_template="trip_editor.DockLoadRow"></anvil-component>
+      </anvil-component>
+    </anvil-component>
+  </anvil-component>
+</anvil-form>

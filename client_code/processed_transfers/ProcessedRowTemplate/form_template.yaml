@@ -1,0 +1,49 @@
+components:
+- layout_properties: {column: COLSKU}
+  name: txt_sku
+  properties: {font_size: 12}
+  type: Label
+- layout_properties: {column: COLSDT}
+  name: txt_status_date
+  properties: {font_size: 12}
+  type: Label
+- layout_properties: {column: COLSTA}
+  name: txt_status
+  properties: {font_size: 12}
+  type: Label
+- layout_properties: {column: COLOQT}
+  name: txt_original_qty
+  properties: {align: center, font_size: 12}
+  type: Label
+- layout_properties: {column: COLAQT}
+  name: txt_altered_qty
+  properties: {align: center, font_size: 12}
+  type: Label
+- layout_properties: {column: COLBAT}
+  name: txt_batch
+  properties:
+    align: center
+    font_size: 12
+    spacing:
+      margin: [null, null, '0', null]
+      padding: [null, null, '0', null]
+  type: Label
+- layout_properties: {column: COLTRP}
+  name: txt_trip
+  properties: {align: center, font_size: 12}
+  type: Label
+- layout_properties: {column: COLNOT}
+  name: lk_note
+  properties: {align: center, font_size: 12, text: View Notes}
+  type: Link
+- layout_properties: {column: COLBAT}
+  name: lk_reprint
+  properties:
+    align: center
+    role: change-badge
+    spacing:
+      margin: ['0', null, '0', null]
+    text: Print Pick Slip
+  type: Link
+container: {type: DataRowPanel}
+is_package: true

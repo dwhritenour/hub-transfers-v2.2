@@ -1,0 +1,33 @@
+<anvil-form container="ColumnPanel">
+  <anvil-component type="ColumnPanel" name="cp_root" prop:spacing='{"padding":[null,"20",null,"20"]}'>
+    <!-- Top bar: always visible -->
+    <anvil-component type="ColumnPanel" name="cp_topbar" prop:role="outlined-card" prop:col_widths='"{}"'>
+      <anvil-component type="Label" name="lbl_kiosk_title" prop:text="Hub Picking" prop:bold="true" prop:role="headline"></anvil-component>
+      <anvil-component type="Label" name="lbl_worker_name" prop:align="right"></anvil-component>
+      <anvil-component type="FlowPanel" name="fp_buttons" prop:align="right" container:grid_position="JTPRUL,JJWUJM">
+        <anvil-component type="Button" name="btn_switch_user" prop:text="Switch Worker" prop:role="outlined-button" prop:align="right"></anvil-component>
+        <anvil-component type="Button" name="btn_kiosk_refresh" prop:text="Refresh" prop:role="outlined-button" prop:align="right"></anvil-component>
+      </anvil-component>
+    </anvil-component>
+    <!-- PANEL 1: Who are you? (visible by default) -->
+    <anvil-component type="ColumnPanel" name="cp_workers">
+      <anvil-component type="Label" name="lbl_workers_cap" prop:text="Tap your name" prop:bold="true" prop:font_size="24"></anvil-component>
+      <anvil-component type="RepeatingPanel" name="rp_workers" prop:item_template="pick_worker.WorkerRow"></anvil-component>
+    </anvil-component>
+    <!-- PANEL 2: My Picks -->
+    <anvil-component type="ColumnPanel" name="cp_picks" prop:visible="false">
+      <anvil-component type="Label" name="lbl_picks_cap" prop:text="My Picks" prop:bold="true" prop:font_size="24"></anvil-component>
+      <anvil-component type="Label" name="lbl_no_picks" prop:text="No picks assigned right now." prop:visible="false" prop:italic="true"></anvil-component>
+      <anvil-component type="RepeatingPanel" name="rp_my_picks" prop:item_template="pick_worker.MyPickRow"></anvil-component>
+    </anvil-component>
+    <!-- PANEL 3: Pick detail -->
+    <anvil-component type="ColumnPanel" name="cp_detail" prop:visible="false">
+      <anvil-component type="ColumnPanel" name="cp_detail_header" prop:role="outlined-card">
+        <anvil-component type="Label" name="lbl_pick_cap" prop:bold="true" prop:font_size="24"></anvil-component>
+        <anvil-component type="Button" name="btn_back_to_picks" prop:text="← My Picks" prop:role="outlined-button"></anvil-component>
+      </anvil-component>
+      <anvil-component type="RepeatingPanel" name="rp_tasks" prop:item_template="pick_worker.PickTaskRow"></anvil-component>
+      <anvil-component type="Button" name="btn_complete_pick" prop:text="COMPLETE PICK" prop:role="filled-button" prop:align="full" prop:font_size="22"></anvil-component>
+    </anvil-component>
+  </anvil-component>
+</anvil-form>

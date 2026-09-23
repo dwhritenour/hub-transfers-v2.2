@@ -1,0 +1,9 @@
+<anvil-form container="ColumnPanel">
+  <!-- One card per pick; code sets a left border colour for priority -->
+  <anvil-component type="ColumnPanel" name="cp_pick_card" prop:role="outlined-card">
+    <anvil-component type="Label" name="lbl_pick_num" prop:bold="true" prop:font_size="24" prop:spacing='{"padding":["0",null,"0",null]}'></anvil-component>
+    <anvil-component type="Label" name="lbl_pick_progress" prop:font_size="20" prop:spacing='{"padding":["0",null,"0",null]}'></anvil-component>
+    <anvil-component type="Label" name="lbl_pick_status" prop:font_size="18" prop:spacing='{"padding":["0",null,"0",null]}'></anvil-component>
+    <anvil-component type="Button" name="btn_open_pick" prop:text="OPEN" prop:role="filled-button" prop:font_size="20"></anvil-component>
+  </anvil-component>
+</anvil-form>

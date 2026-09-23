@@ -1,0 +1,25 @@
+<anvil-form container="DataRowPanel">
+  <anvil-component type="Label" name="lbl_x_stage" prop:text="STAGE" prop:bold="true" prop:font_size="12" prop:align="left" container:column="JKSDUP"></anvil-component>
+  <anvil-component type="Label" name="lbl_x_alert" prop:bold="true" prop:font_size="16" prop:align="center" container:column="VJQQOR"></anvil-component>
+  <anvil-component type="Label" name="lbl_x_sku" bind:text="self.item['sku']" container:column="OJLQEN"></anvil-component>
+  <anvil-component type="Label" name="lbl_x_pick" prop:align="center" bind:text="self.item['pick_disp']" container:column="CDMWXE"></anvil-component>
+  <anvil-component type="Label" name="lbl_x_qty" prop:align="center" bind:text="self.item['qty_disp']" container:column="HONHEK"></anvil-component>
+  <anvil-component type="Label" name="lbl_x_picked" prop:align="center" bind:text="self.item['picked_disp']" container:column="RGFBIO"></anvil-component>
+  <anvil-component type="Label" name="lbl_x_days" prop:text="0d" prop:bold="true" prop:font_size="14" prop:align="center" container:column="GTVBFU"></anvil-component>
+  <anvil-component type="Label" name="lbl_x_left" prop:text="0d" prop:bold="true" prop:font_size="14" prop:align="center" container:column="GQQJSQ"></anvil-component>
+  <anvil-component type="Label" name="lbl_x_e21" prop:align="left" prop:spacing='{"padding":[null,null,null,"5"]}' bind:text="self.item['e21_disp']" container:column="ULCJRM"></anvil-component>
+  <anvil-component type="FlowPanel" name="fp_x_actions" prop:align="left" container:column="LFVRBI">
+    <anvil-component type="Button" name="btn_x_close" prop:text="SHIPPED-CLOSE" prop:role="outlined-button" prop:font_size="13"></anvil-component>
+    <anvil-component type="Button" name="btn_x_return" prop:text="RETURN TO STOCK" prop:role="outlined-button" prop:font_size="13"></anvil-component>
+    <anvil-component type="Button" name="btn_x_deliver" prop:text="CONFIRM DELIVERED" prop:role="outlined-button" prop:font_size="13"></anvil-component>
+    <anvil-component type="Button" name="btn_x_cancel_rec" prop:text="CANCEL REC" prop:role="outlined-button" prop:font_size="13"></anvil-component>
+    <anvil-component type="Label" name="lbl_x_owner" prop:text="" prop:italic="true" prop:foreground="#595959" prop:font_size="13"></anvil-component>
+  </anvil-component>
+  <anvil-component type="FlowPanel" name="fp_x_entry" prop:align="left" prop:visible="false" container:column="LFVRBI">
+    <anvil-component type="TextBox" name="tb_x_date" prop:placeholder="Ship date YYYY-MM-DD" prop:font_size="13" prop:margin='["4",null,"4",null]' container:width="173.5"></anvil-component>
+    <anvil-component type="TextBox" name="tb_x_by" prop:placeholder="Initials" prop:font_size="13" prop:margin='["4",null,"4",null]' container:width="103"></anvil-component>
+    <anvil-component type="TextBox" name="tb_x_note" prop:placeholder="Note (optional)" prop:font_size="13" prop:margin='["4",null,"4",null]' container:width="294"></anvil-component>
+    <anvil-component type="Button" name="btn_x_save" prop:text="CONFIRM" prop:role="filled-button" prop:font_size="13"></anvil-component>
+    <anvil-component type="Button" name="btn_x_cancel" prop:text="CANCEL" prop:role="outlined-button" prop:font_size="13"></anvil-component>
+  </anvil-component>
+</anvil-form>

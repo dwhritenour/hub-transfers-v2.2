@@ -1,0 +1,17 @@
+<anvil-form container="HtmlTemplate" prop:html="@theme:standard-page.html">
+  <anvil-component type="ColumnPanel" name="content_panel" container:slot="default">
+    <anvil-component type="ColumnPanel" name="cp_exc_head" prop:role="outlined-card" container:grid_position="JMXQAR,QIYQBI">
+      <anvil-component type="Label" name="lbl_exc_title" prop:text="Hub Exceptions " prop:bold="true" prop:role="headline" prop:spacing='{"margin":[null,null,"0",null]}' container:grid_position="DHYHDE,YDFJJJ WCCYQK,EFQQOL"></anvil-component>
+      <anvil-component type="Label" name="label_2" prop:text="Approved → Picked → Departed → e21: every stage, how long it has sat, and how long until the system acts" prop:spacing='{"margin":["0",null,null,null],"padding":["0",null,null,null]}' prop:italic="true" prop:bold="true" container:grid_position="DHYHDE,YDFJJJ KEBGWY,BDDQOH"></anvil-component>
+      <anvil-component type="Button" name="btn_exc_refresh" prop:text="Refresh" prop:role="outlined-button" prop:align="right" prop:spacing='{"margin":[null,null,"0",null]}' container:grid_position="DHYHDE,KUHPPI"></anvil-component>
+      <anvil-component type="Label" name="lbl_exc_sub" prop:foreground="#595959" prop:spacing='{"margin":["0",null,"0",null],"padding":["0",null,"0",null]}'></anvil-component>
+    </anvil-component>
+    <anvil-component type="Label" name="lbl_exc_none" prop:text="No exceptions — the board is clean." prop:italic="true" prop:visible="false" container:grid_position="BVTQEE,CPWIHK"></anvil-component>
+    <anvil-component type="DataGrid" name="dg_exceptions" prop:columns='[{"id":"JKSDUP","title":"Stage","data_key":"column_1","width":"100","expand":false},{"id":"VJQQOR","title":"","data_key":"column_2","width":"100"},{"id":"OJLQEN","title":"SKU","data_key":"column_3","width":"200"},{"id":"CDMWXE","data_key":"column_4","title":"Ref","width":"100"},{"id":"HONHEK","data_key":"column_5","title":"Qty","width":"100"},{"id":"RGFBIO","data_key":"column_6","title":"Since","width":"100"},{"id":"GTVBFU","data_key":"column_7","title":"Age","width":"100"},{"id":"GQQJSQ","data_key":"column_8","title":"Left","width":"150"},{"id":"ULCJRM","data_key":"column_9","title":"Detail","width":"450","expand":true},{"id":"LFVRBI","data_key":"column_10","title":"Action","width":"350"}]' prop:role='["tonal-data-grid","horizontal-scroll"]' container:grid_position="DNHUMF,BAJKPZ" container:full_width_row="false">
+      <anvil-component type="RepeatingPanel" name="rp_exceptions" prop:item_template="Transfer_Dashboard.exceptions.ExceptionRow" prop:margin='["0",null,null,null]'></anvil-component>
+    </anvil-component>
+  </anvil-component>
+  <anvil-component type="FlowPanel" name="navbar_links" container:slot="nav-right"></anvil-component>
+  <anvil-component type="Transfer_Dashboard.NavSidebar" name="nav" container:slot="left-nav"></anvil-component>
+  <anvil-component type="Label" name="label_1" prop:text="Exceptions" prop:bold="true" container:slot="title"></anvil-component>
+</anvil-form>

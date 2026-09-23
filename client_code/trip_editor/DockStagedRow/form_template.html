@@ -1,0 +1,16 @@
+<anvil-form container="DataRowPanel" prop:align="left">
+  <!-- Trip Editor v3.1.1: the behavioral cells are DESIGNER components,
+  each placed in its dg_staged column. Plain text columns (SKU, qty, lb,
+  ft3, pick, location) still auto-render from the item's *_disp data
+  keys. Events are wired in code, not here. -->
+  <anvil-component type="CheckBox" name="cb_sel" prop:align="center" container:column="sel"></anvil-component>
+  <anvil-component type="Label" name="lbl_age" prop:text="AGE" prop:bold="true" prop:font_size="14" prop:align="center" container:column="age"></anvil-component>
+  <anvil-component type="Label" name="lbl_turg" prop:text="TIME" prop:bold="true" prop:font_size="14" prop:align="center" container:column="turg"></anvil-component>
+  <anvil-component type="Label" name="lbl_iurg" prop:text="INV" prop:bold="true" prop:font_size="14" prop:align="center" container:column="iurg"></anvil-component>
+  <anvil-component type="Label" name="lbl_sku" bind:text="self.item['sku']" container:column="sku"></anvil-component>
+  <anvil-component type="Label" name="lbl_vol_disp" prop:align="center" bind:text="self.item['vol_disp']" container:column="vol"></anvil-component>
+  <anvil-component type="Label" name="lbl_qty_disp_wt_disp" prop:align="center" bind:text="self.item['wt_disp']" container:column="wt"></anvil-component>
+  <anvil-component type="Label" name="lbl_qty_disp" prop:align="center" bind:text="self.item['qty_disp']" container:column="qty"></anvil-component>
+  <anvil-component type="Label" name="lbl_pick_disp" prop:align="center" bind:text="self.item['pick_disp']" container:column="pick"></anvil-component>
+  <anvil-component type="Label" name="lbl_loc_disp" prop:align="center" bind:text="self.item['loc_disp']" container:column="loc"></anvil-component>
+</anvil-form>

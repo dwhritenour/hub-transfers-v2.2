@@ -1,0 +1,27 @@
+<anvil-form container="DataRowPanel">
+  <!-- Trip Editor v3.1.1: the behavioral cells are DESIGNER components,
+  each placed in its dg_load column. Plain text columns (SKU, qty,
+  lb, ft3, location) still auto-render from the item's *_disp data
+  keys. Events are wired in code, not here. -->
+  <anvil-component type="Label" name="lbl_turg" prop:text="TIME" prop:bold="true" prop:font_size="14" prop:align="center" container:column="turg"></anvil-component>
+  <anvil-component type="Label" name="lbl_iurg" prop:text="INV" prop:bold="true" prop:font_size="14" prop:align="center" container:column="iurg"></anvil-component>
+  <!-- Column actions: the normal action row... -->
+  <anvil-component type="FlowPanel" name="fp_actions" prop:align="center" container:column="actions">
+    <anvil-component type="Button" name="btn_l_loaded" prop:text="LOADED" prop:role="filled-button" prop:font_size="13" prop:spacing='{"padding":[null,"15",null,"15"]}'></anvil-component>
+    <anvil-component type="Button" name="btn_l_short" prop:text="SHORT" prop:role="outlined-button" prop:font_size="13" prop:spacing='{"padding":[null,"15",null,"15"]}'></anvil-component>
+    <anvil-component type="Label" name="lbl_l_result" prop:font_size="14" prop:bold="false"></anvil-component>
+    <anvil-component type="Link" name="lk_l_undo" prop:text="Undo" prop:visible="false" prop:foreground="#595959" prop:bold="false"></anvil-component>
+    <anvil-component type="Link" name="lk_l_remove" prop:text="Remove" prop:visible="false" prop:foreground="#595959" prop:bold="false"></anvil-component>
+  </anvil-component>
+  <!-- ...and the inline short-load entry, hidden until SHORT is clicked -->
+  <anvil-component type="FlowPanel" name="fp_short_entry" prop:visible="false" container:column="actions">
+    <anvil-component type="TextBox" name="tb_l_qty" prop:type="number" prop:font_size="14" prop:placeholder="Qty loaded" container:width="91.5"></anvil-component>
+    <anvil-component type="DropDown" name="dd_l_reason" prop:include_placeholder="true" prop:placeholder="Reason..." container:width="239"></anvil-component>
+    <anvil-component type="Button" name="btn_l_short_save" prop:text="SAVE" prop:role="filled-button" prop:font_size="13" prop:spacing='{"padding":[null,"15",null,"15"]}' prop:align="right"></anvil-component>
+    <anvil-component type="Button" name="btn_l_short_cancel" prop:text="CANCEL" prop:role="outlined-button" prop:font_size="13" prop:spacing='{"padding":[null,"15",null,"15"]}'></anvil-component>
+  </anvil-component>
+  <anvil-component type="Label" name="lbl_sku" bind:text="self.item['sku']" container:column="sku"></anvil-component>
+  <anvil-component type="Label" name="lbl_qty_disp" prop:align="center" bind:text="self.item['qty_disp']" container:column="qty"></anvil-component>
+  <anvil-component type="Label" name="lbl_wt_disp" prop:align="center" bind:text="self.item['wt_disp']" container:column="wt"></anvil-component>
+  <anvil-component type="Label" name="lbl_vol_disp" prop:align="center" bind:text="self.item['vol_disp']" container:column="vol"></anvil-component>
+</anvil-form>
