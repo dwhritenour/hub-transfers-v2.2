@@ -80,7 +80,6 @@ class SnoozedRow(SnoozedRowTemplate):
     self.lbl_s_sku.bold = True
     self.lbl_s_sku.foreground = _HOLD_FG if hold_text else '#000000'
     self.lbl_s_sku.tooltip = hold_text
-    self.lbl_s_desc.text = str(item.get('part_description') or '')
     self.lbl_s_qty.text = _fmt(item.get('snoozed_qty'))
 
     until = item.get('snooze_until')
