@@ -25,12 +25,13 @@
 #   (action, recommendation_id, pick_line_id, trip_id, date, confirmed_by, note)
 # =============================================================================
 
-__version__       = "2.0.2"
+__version__       = "2.0.3"
 __version_date__  = "2026-09-23"
 
 from ._anvil_designer import exceptionsTemplate
 from anvil import *
 import anvil.server
+import anvil.js
 
 
 def _fmt(v):
@@ -45,7 +46,7 @@ def _fmt(v):
 # line you are working on. Every other row gets a light grey background.
 # The DataRowPanel's own background property is used, so no theme change.
 _ZEBRA = '#EEF1F5'
-_FREEZE_ROLES = ['tonal-data-grid', 'horizontal-scroll', 'freeze-first-col']
+_FREEZE_ROLES = ['tonal-data-grid', 'horizontal-scroll', 'freeze-first-two']   # 2.0.3: SKU + Stage
 
 
 def _zebra(rp):
@@ -63,11 +64,17 @@ def _zebra(rp):
     pass
 
 
-def _freeze_first_col(dg):
-  """theme.css .anvil-role-freeze-first-col: first column sticks while the
-  grid scrolls sideways. Set here so the designer needs no change."""
+def _freeze_first_cols(dg):
+  """theme.css .anvil-role-freeze-first-two: the first TWO columns stick
+  while the grid scrolls sideways (2.0.3, Dave). The second column's
+  offset must equal the first column's width, so it is read from the
+  grid's column list and handed to the CSS as --freeze-col1. Set here so
+  the designer needs no change; widen SKU in the designer and it follows."""
   try:
     dg.role = list(_FREEZE_ROLES)
+    cols = dg.columns or []
+    w = int(float(str(cols[0].get('width') or 200).replace('px', ''))) if cols else 200
+    anvil.js.get_dom_node(dg).style.setProperty('--freeze-col1', '%dpx' % w)
   except Exception:
     pass
 
@@ -80,7 +87,7 @@ class exceptions(exceptionsTemplate):
 
     self.btn_exc_refresh.set_event_handler('click', self.refresh_click)
     self.rp_exceptions.set_event_handler('x-action', self.row_action)
-    _freeze_first_col(self.dg_exceptions)
+    _freeze_first_cols(self.dg_exceptions)
 
     self.load()
 
