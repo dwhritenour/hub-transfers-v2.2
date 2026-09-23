@@ -25,8 +25,8 @@
 #   (action, recommendation_id, pick_line_id, trip_id, date, confirmed_by, note)
 # =============================================================================
 
-__version__       = "2.0.0"
-__version_date__  = "2026-09-05"
+__version__       = "2.0.2"
+__version_date__  = "2026-09-23"
 
 from ._anvil_designer import exceptionsTemplate
 from anvil import *
@@ -41,6 +41,37 @@ def _fmt(v):
     return str(v)
 
 
+# 2026-09-23 (Dave): with the grid scrolling sideways it is easy to lose the
+# line you are working on. Every other row gets a light grey background.
+# The DataRowPanel's own background property is used, so no theme change.
+_ZEBRA = '#EEF1F5'
+_FREEZE_ROLES = ['tonal-data-grid', 'horizontal-scroll', 'freeze-first-col']
+
+
+def _zebra(rp):
+  """Every other row: role 'zebra-row' (theme.css shades the row AND its
+  frozen first cell) plus the background property as a belt-and-braces
+  fallback for a theme without the rule."""
+  try:
+    for i, row in enumerate(rp.get_components()):
+      row.background = _ZEBRA if i % 2 else ''
+      try:
+        row.role = 'zebra-row' if i % 2 else None
+      except Exception:
+        pass
+  except Exception:
+    pass
+
+
+def _freeze_first_col(dg):
+  """theme.css .anvil-role-freeze-first-col: first column sticks while the
+  grid scrolls sideways. Set here so the designer needs no change."""
+  try:
+    dg.role = list(_FREEZE_ROLES)
+  except Exception:
+    pass
+
+
 class exceptions(exceptionsTemplate):
 
   def __init__(self, **properties):
@@ -49,6 +80,7 @@ class exceptions(exceptionsTemplate):
 
     self.btn_exc_refresh.set_event_handler('click', self.refresh_click)
     self.rp_exceptions.set_event_handler('x-action', self.row_action)
+    _freeze_first_col(self.dg_exceptions)
 
     self.load()
 
@@ -69,6 +101,7 @@ class exceptions(exceptionsTemplate):
       x['e21_disp'] = x.get('detail') or ''                # column "Detail"
       x['desc_disp'] = x.get('part_description') or ''
     self.rp_exceptions.items = rows
+    _zebra(self.rp_exceptions)
 
     s = board.get('summary') or {}
     def _c(stage):

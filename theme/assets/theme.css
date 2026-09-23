@@ -1074,3 +1074,32 @@ div.plot-container.plotly svg.main-svg {
   font-size: 11px !important;
   line-height: 1.2 !important;
 }
+
+/* =====================================================================
+2026-09-23 (Hub Transfers v2.2): FROZEN FIRST COLUMN + ZEBRA ROWS
+Roles are set in CODE (snoozed / exceptions forms), nothing to add in
+the designer:
+freeze-first-col  on the DataGrid (with tonal-data-grid +
+horizontal-scroll): the first column stays put
+while the rest scrolls sideways.
+zebra-row         on every other DataRowPanel: light grey stripe;
+the frozen cell takes the same shade so the row
+reads as one line.
+===================================================================== */
+.anvil-role-freeze-first-col .data-grid-child-panel div.data-row-col:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background-color: %color:Background%;
+  box-shadow: 2px 0 0 %color:Surface Variant%;
+}
+.anvil-role-freeze-first-col .data-grid-child-panel > div.auto-grid-header div.data-row-col:first-child {
+  z-index: 3;
+  background: linear-gradient(0deg, %color:Primary Overlay 2%, %color:Primary Overlay 2%), %color:Background%;
+}
+.anvil-data-row-panel.anvil-role-zebra-row {
+  background-color: #EEF1F5;
+}
+.anvil-role-freeze-first-col .anvil-data-row-panel.anvil-role-zebra-row div.data-row-col:first-child {
+  background-color: #EEF1F5;
+}

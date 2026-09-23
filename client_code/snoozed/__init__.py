@@ -23,7 +23,7 @@
 #   until, note)
 # =============================================================================
 
-__version__       = "1.0.0"
+__version__       = "1.0.2"
 __version_date__  = "2026-09-23"
 
 from ._anvil_designer import snoozedTemplate
@@ -39,6 +39,37 @@ def _fmt(v):
     return '' if v is None else str(v)
 
 
+# 2026-09-23 (Dave): with the grid scrolling sideways it is easy to lose the
+# line you are working on. Every other row gets a light grey background.
+# The DataRowPanel's own background property is used, so no theme change.
+_ZEBRA = '#EEF1F5'
+_FREEZE_ROLES = ['tonal-data-grid', 'horizontal-scroll', 'freeze-first-col']
+
+
+def _zebra(rp):
+  """Every other row: role 'zebra-row' (theme.css shades the row AND its
+  frozen first cell) plus the background property as a belt-and-braces
+  fallback for a theme without the rule."""
+  try:
+    for i, row in enumerate(rp.get_components()):
+      row.background = _ZEBRA if i % 2 else ''
+      try:
+        row.role = 'zebra-row' if i % 2 else None
+      except Exception:
+        pass
+  except Exception:
+    pass
+
+
+def _freeze_first_col(dg):
+  """theme.css .anvil-role-freeze-first-col: first column sticks while the
+  grid scrolls sideways. Set here so the designer needs no change."""
+  try:
+    dg.role = list(_FREEZE_ROLES)
+  except Exception:
+    pass
+
+
 class snoozed(snoozedTemplate):
 
   def __init__(self, **properties):
@@ -47,6 +78,7 @@ class snoozed(snoozedTemplate):
 
     self.btn_sn_refresh.set_event_handler('click', self.refresh_click)
     self.rp_snoozed.set_event_handler('x-action', self.row_action)
+    _freeze_first_col(self.dg_snoozed)
 
     self.load()
 
@@ -62,6 +94,7 @@ class snoozed(snoozedTemplate):
       alert("Could not load the snoozed list: %s" % result.get('message', 'unknown error'))
     rows = result.get('rows') or []
     self.rp_snoozed.items = rows
+    _zebra(self.rp_snoozed)
     self.lbl_sn_none.visible = not rows
 
     dated = sum(1 for r in rows if r.get('snooze_until'))

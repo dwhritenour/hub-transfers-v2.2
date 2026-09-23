@@ -1,11 +1,14 @@
 # =============================================================================
 # snoozed/SnoozedRow/__init__.py
 # -----------------------------------------------------------------------------
-# Version: 1.0.0 (2026-09-23) - Hub Transfers v2.2 #snoozed row.
+# Version: 1.0.1 (2026-09-23) - Hub Transfers v2.2 #snoozed row.
+# 1.0.1: Description column removed (Dave) so the Action column is on
+#        screen without scrolling; the description is the SKU's tooltip.
+#        lbl_s_desc is optional - the code tolerates its absence.
 # One snoozed request (container: DataRowPanel). Every cell is a DESIGNER
 # label whose text this code sets in render() - no data bindings needed:
-#   lbl_s_sku      SKU (bold; dark red when an ORDER HOLD applies)
-#   lbl_s_desc     part description
+#   lbl_s_sku      SKU (bold; dark red when an ORDER HOLD applies;
+#                  tooltip = description + ORDER HOLD line)
 #   lbl_s_qty      quantity snoozed
 #   lbl_s_until    until-date, or 'no date'
 #   lbl_s_left     days left ('today' / 'OVERDUE' red / 'n/a' when no date)
@@ -76,11 +79,13 @@ class SnoozedRow(SnoozedRowTemplate):
     item = self.item or {}
     hold_text = item.get('order_hold_text') or ''
 
+    desc = str(item.get('part_description') or '')
     self.lbl_s_sku.text = str(item.get('sku') or '')
     self.lbl_s_sku.bold = True
     self.lbl_s_sku.foreground = _HOLD_FG if hold_text else '#000000'
-    self.lbl_s_sku.tooltip = hold_text
-    self.lbl_s_desc.text = str(item.get('part_description') or '')
+    self.lbl_s_sku.tooltip = '\n'.join(x for x in (desc, hold_text) if x)
+    if hasattr(self, 'lbl_s_desc'):          # 1.0.1: column optional
+      self.lbl_s_desc.text = desc
     self.lbl_s_qty.text = _fmt(item.get('snoozed_qty'))
 
     until = item.get('snooze_until')
