@@ -160,7 +160,7 @@ components:
   type: FlowPanel
 - layout_properties: {slot: title}
   name: lb_title
-  properties: {bold: true, role: title, text: Hub Transfers v2.1}
+  properties: {bold: true, role: title, text: Hub Transfers v2.2}
   type: Label
 - layout_properties: {slot: left-nav}
   name: nav
