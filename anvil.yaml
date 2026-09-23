@@ -11,7 +11,19 @@ runtime_options:
   server_persist: true
   server_spec: {base: python310-minimal}
   version: 3
-scheduled_tasks: []
+scheduled_tasks:
+- job_id: RUYKEMLH
+  task_name: run_transfer_review
+  time_spec:
+    at: {}
+    every: minute
+    n: 15
+- job_id: CPPTKCJC
+  task_name: run_pipeline_monitor
+  time_spec:
+    at: {}
+    every: minute
+    n: 10
 secrets:
   ANTHROPIC_API_KEY:
     type: secret
@@ -60,13 +72,13 @@ secrets:
     value:
       AP5VZQ44L3ZYVZUS: KeR7K0GmwZaovtjRzCC3Bt87AVU81UMZGreQ+TiXcSTq8NDW53Yt04HjRe4r+ZmXvrERuOcQoLVs7LpEY5k/K87hD6XRTuXwgqfy5+Thf8gT7G6gTMmjmJWQvwBOmAxvOtzE
       CKM4ICJV5P7F5XTZ: t1+SKI95p6RnQqJ6s2FCrY+zPYCqguP8oQatYhKaqf6Z+BtT4yKCnrKYwEZ4PgNY7bmFgcgZ4MzonQThayftffbEJKMCzcHDXZI2dUVl6ikIdWVQYXY5eed0BHYM+yP9Q4Ct
-      IRHZSZVAHHFERC5J: {? '' : D8lo8uiOQCYOXAQXYhtAHSBvhbEtQzrWdxrKVmzEpLLaDy5ceWepBv36cc9lW0C2lgd2qhaRW9McJNUhMVgunU8Z+mlsWgRWOzlZ+NPDpKdOdeaVSFaR9PwXoVLWYrKo3Br9emoD69TaFj52i1ouVVQRZe28tdvZ3vMlNVFtB3vbqf68R1qpx4LN50yKQEyl0g==}
+      IRHZSZVAHHFERC5J: {? '' : bxx9HVSnXe3scnVOm38LBGtTnlHi0p2u8PgWiVSZOr9hIjja9nEQGGeLWHdq4hJBrKzyYEXNVZ9HxBepuc2dz4wCKI8a5KkTXa3YLyOwApC48fQb9a6WDkbeUkbACO19jbMDs14NrNXda3F6aqowhRBO4wXpPIEORHetSsV7+CZWi0+BjZPeTYP8lmoGYCPk}
   SMS_TEST_MODE:
     type: secret
     value:
       AP5VZQ44L3ZYVZUS: yuIBqunUA0BDL7IClvzlV7uZpD3Pa2yZul6HSIZyiyauwvrtQ4AZyAHU44WVtMkF9mIIQ+L2Q2iMjpguVU61xdTLeaLpZIhFg2aq+SOip5ttkb01pX1BQyark/c9K5/L/y2Ieg==
       CKM4ICJV5P7F5XTZ: 11ur11ffUOFWUTkvJyfU6h6y5guh4e0PjLy/vvNVshfY7gsBm8UvF8vH9RZiPA3kboJOc+Pt6Krrj6sSd71hAUN7DxMapWlw2eHgC0SsHlIXb4fMXnqD9YYxCbIeCMGHKZAu0A==
-      IRHZSZVAHHFERC5J: {? '' : nIVrWdcIW0bg4N4HxD++0j7MDdUVprozc7Ba1JP7oaJQI85YwJExssvK759BDogTCnWpofwVODlradEQi/6uQK8cUAk6T3ez0Gv8VRv8Q7Yv7z6/zdZPQ/c41wWEIfINhBfkmVzVPsqB9NPv5k23R5ZiXSVHDpzOo2Na65+fSxHsYau/0MM5WpdiqptZUaCvqQ8=}
+      IRHZSZVAHHFERC5J: {? '' : t5hxQe/Bi2+dfx0fCNjkg3atgCLEvjnqMKJHBpPaq/KJ96BhQ+/VNDQGAL/NPXwamy8RFY3aPbaysmqzu/PYz6srds+MvJzmPGdhtZIOKWjikdSqRJC34OZ03FB22Syh9boPsOKVr5kxqGvApo8gu+QSDir6YXaBDjWTJG2tvn1Q4XOvLWiXkrkpE0JOsR/ubsBi}
   TWILIO_ACCOUNT_SID:
     type: secret
     value:
