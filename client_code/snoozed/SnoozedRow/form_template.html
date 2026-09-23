@@ -1,0 +1,23 @@
+<anvil-form container="DataRowPanel">
+  <anvil-component type="Label" name="lbl_s_sku" prop:bold="true" prop:font_size="13" prop:align="left" container:column="SNCSKU"></anvil-component>
+  <anvil-component type="Label" name="lbl_s_desc" prop:font_size="12" prop:align="left" container:column="SNCDES"></anvil-component>
+  <anvil-component type="Label" name="lbl_s_qty" prop:bold="true" prop:font_size="14" prop:align="center" container:column="SNCQTY"></anvil-component>
+  <anvil-component type="Label" name="lbl_s_until" prop:font_size="13" prop:align="center" container:column="SNCUNT"></anvil-component>
+  <anvil-component type="Label" name="lbl_s_left" prop:bold="true" prop:font_size="14" prop:align="center" container:column="SNCLFT"></anvil-component>
+  <anvil-component type="Label" name="lbl_s_reason" prop:font_size="12" prop:align="left" prop:spacing='{"padding":[null,null,null,"5"]}' container:column="SNCRSN"></anvil-component>
+  <anvil-component type="Label" name="lbl_s_star" prop:font_size="13" prop:align="center" container:column="SNCSTA"></anvil-component>
+  <anvil-component type="Label" name="lbl_s_hub" prop:font_size="13" prop:align="center" container:column="SNCHUB"></anvil-component>
+  <anvil-component type="Label" name="lbl_s_demand" prop:font_size="13" prop:align="center" container:column="SNCDEM"></anvil-component>
+  <anvil-component type="Label" name="lbl_s_urg" prop:bold="true" prop:font_size="12" prop:align="left" container:column="SNCURG"></anvil-component>
+  <anvil-component type="FlowPanel" name="fp_s_actions" prop:align="left" prop:visible="true" container:column="SNCACT">
+    <anvil-component type="Button" name="btn_s_wake" prop:text="WAKE NOW" prop:role="filled-button" prop:font_size="13"></anvil-component>
+    <anvil-component type="Button" name="btn_s_date" prop:text="CHANGE DATE" prop:role="outlined-button" prop:font_size="13"></anvil-component>
+    <anvil-component type="Button" name="btn_s_reject" prop:text="REJECT" prop:role="outlined-button" prop:font_size="13"></anvil-component>
+  </anvil-component>
+  <anvil-component type="FlowPanel" name="fp_s_entry" prop:align="left" prop:visible="false" container:column="SNCACT">
+    <anvil-component type="DatePicker" name="dp_s_until" prop:placeholder="Until (blank = no date)" prop:format="%Y-%m-%d" prop:font_size="13" prop:visible="false" prop:margin='["4",null,"4",null]' container:width="190"></anvil-component>
+    <anvil-component type="TextBox" name="tb_s_note" prop:placeholder="Note (optional)" prop:font_size="13" prop:margin='["4",null,"4",null]' container:width="220"></anvil-component>
+    <anvil-component type="Button" name="btn_s_save" prop:text="CONFIRM" prop:role="filled-button" prop:font_size="13"></anvil-component>
+    <anvil-component type="Button" name="btn_s_cancel" prop:text="CANCEL" prop:role="outlined-button" prop:font_size="13"></anvil-component>
+  </anvil-component>
+</anvil-form>
