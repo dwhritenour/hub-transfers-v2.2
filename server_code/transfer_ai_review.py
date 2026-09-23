@@ -253,9 +253,32 @@ This ensures the Hub Manager always sees current data when reviewing.
 #                        short-circuit makes them unreachable for the
 #                        cases that matter.
 # =============================================================================
-__version__       = "5.35.2"
-__version_date__  = "2026-09-18"
+__version__       = "5.36.0"
+__version_date__  = "2026-09-23"
 __version_notes__ = (
+  "5.36.0 (2026-09-23, Hub Transfers v2.2 SNOOZE + ORDER HOLD): (0) one "
+  "review at a time - the run takes the 'transfer_review_run' application "
+  "lock (sp_getapplock, session-owned) and a second concurrent run exits "
+  "with Transfer_Review_Skipped_Already_Running (the 5.35.4 v2.1 hotfix: "
+  "a manual run overlapping the scheduled one made duplicate recs). (a) ORDER "
+  "HOLD - check_order_holds_batch() reads sales_orders_due Hold-status "
+  "lines (e21 item/order status 00) per candidate; the prompt gets a SALES "
+  "ORDERS ON HOLD block and the model is told to size the RELEASED "
+  "shortfall only (calc minus held, floor 0); the reasoning is prefixed "
+  "'ORDER HOLD: 30 on SO 610353-001, 6 on SO 609449-001 (36 of 37 on open "
+  "orders)'. Held orders stay demand in the view (nothing hidden - a large "
+  "held order is the one the Hub Manager wants to see and call Sales "
+  "about); the rec just says so. A change in held qty counts as an input "
+  "change for the re-review gate (old value parsed from the reasoning "
+  "prefix). (b) SNOOZE - transfer_dashboard.wake_expired_snoozes() runs at "
+  "the top of every batch: Paused recs whose snooze_until has arrived go "
+  "back to Pending (reviewed_date stamped, so the gate re-reviews them). "
+  "Batch summary adds Woken:N. Paused recs are otherwise handled exactly "
+  "as before (never sent to the AI, snapshot touched, obsoleted when the "
+  "SKU no longer needs a transfer). (c) 5.35.3 freshness-gate fix "
+  "included: an empty hub_transfer_orders is re-counted after 30 s and, "
+  "if still empty, accepted (179 of 205 firings were skipped 9/19-9/23 "
+  "while the table was legitimately empty). "
   "5.35.2 (2026-09-18): the AI prompt now states TODAY'S DATE (Eastern) and "
   "spells out the earliest ship date as 'N days PAST DUE' / 'today' / 'in N "
   "days'. YS12D0100 rec 3982: the model read 'Earliest Ship Date: 2026-09-01' "
@@ -389,8 +412,19 @@ _FRESHNESS_TABLES = (
   # v5.34.1: the in-transit credit. Empty = every SKU with a unit on the
   # road looks short (34 phantom recs on 2026-09-05). Hourly load at :40,
   # so 90 minutes = one missed cycle plus slack.
+  # v5.35.3: EMPTY IS LEGITIMATE for this table - once Starlite receives
+  # promptly there are hours (whole weekends) with no open SO-16 line at
+  # all. 9/19-9/23 the gate skipped 179 of 205 firings on 'Empty:
+  # dbo.hub_transfer_orders' while every line on the table had been
+  # received. The mid-truncate case (the loader empties the table for
+  # under a minute while it reloads) is caught by re-counting after
+  # _EMPTY_RECHECK_SECONDS: still empty -> accepted and logged.
   ('dbo.hub_transfer_orders', 'e21 in-transit supply (InTransitFromE21)', 'create_date', 90),
 )
+
+# v5.35.3: tables that MAY be empty for real. Empty -> wait, recount, accept.
+_MAY_BE_EMPTY = ('dbo.hub_transfer_orders',)
+_EMPTY_RECHECK_SECONDS = 30
 
 
 import anvil.server
@@ -403,6 +437,7 @@ import uuid
 import csv
 import io
 import time
+import re
 
 # Import centralized configuration
 from . import db_config
@@ -775,6 +810,61 @@ def check_duplicate_warnings_batch(conn, candidates):
   return warnings
 
 
+def check_order_holds_batch(conn, candidates, planning_horizon_days):
+  """
+  v5.36 ORDER HOLD. For every candidate SKU, the open-order demand inside the
+  planning horizon that sits on Hold-status lines (e21 item OR order status
+  '00'). Returns {sku: {'held_qty', 'total_qty', 'lines': ['30 on SO 610353-001', ...],
+  'text': 'ORDER HOLD: ...'}} for SKUs with held units only.
+
+  Held orders remain demand in the view (Dave / Hub Manager 2026-09-22:
+  do NOT hide them - a large held order is the one to call Sales about).
+  This just tells the model and the manager which part of the need is
+  conditional. Same wording as transfer_dashboard._order_hold_text so the
+  live Transfer Form line and the persisted reasoning prefix match.
+  """
+  if not candidates:
+    return {}
+  skus = sorted({(c.get('sku') or '').strip() for c in candidates if c.get('sku')})
+  if not skus:
+    return {}
+  placeholders = ','.join(['%s'] * len(skus))
+  cursor = conn.cursor()
+  cursor.execute(
+    "SELECT nx_sku, nx_order_numb, nx_rel_numb, nx_qty_balance_due, "
+    "       CASE WHEN ISNULL(nx_item_status, '') = '00' "
+    "              OR ISNULL(nx_order_status, '') = '00' THEN 1 ELSE 0 END AS on_hold "
+    "FROM dbo.sales_orders_due "
+    "WHERE nx_qty_balance_due > 0 "
+    "  AND nx_dship_by_date > '1900-01-01' "
+    "  AND nx_dship_by_date <= DATEADD(DAY, %s, CAST(GETDATE() AS DATE)) "
+    "  AND nx_sku IN (" + placeholders + ") "
+    "ORDER BY nx_sku, nx_dship_by_date",
+    (int(planning_horizon_days),) + tuple(skus))
+  holds = {}
+  for o in cursor.fetchall():
+    sku = (o['nx_sku'] or '').strip()
+    qty = int(round(float(o['nx_qty_balance_due'] or 0)))
+    h = holds.setdefault(sku, {'held_qty': 0, 'total_qty': 0, 'lines': []})
+    h['total_qty'] += qty
+    if o['on_hold']:
+      label = str(o['nx_order_numb'])
+      if o.get('nx_rel_numb'):
+        label = label + '-' + str(o['nx_rel_numb'])
+      h['held_qty'] += qty
+      h['lines'].append('%d on SO %s' % (qty, label))
+  out = {}
+  for sku, h in holds.items():
+    if h['held_qty'] <= 0:
+      continue
+    h['text'] = ("ORDER HOLD: " + ', '.join(h['lines']) +
+                 " (%d of %d on open orders). Held orders may never release - confirm "
+                 "with Sales, then ship the released part or Snooze the held part."
+                 % (h['held_qty'], h['total_qty']))
+    out[sku] = h
+  return out
+
+
 def get_usage_trends(conn, sku):
   recent_days = 30
   prior_days = 30
@@ -1014,7 +1104,8 @@ def get_existing_recommendation(conn, sku):
            has_duplicate_warning,
            calculated_transfer_qty, time_urgency, inventory_urgency,
            event_type, total_demand, hub_available, starlite_available,
-           e21_in_transit_qty
+           e21_in_transit_qty,
+           LEFT(CAST(reasoning AS nvarchar(max)), 400) AS reasoning_head
     FROM dbo.ai_transfer_recommendations
     WHERE sku = %s
       AND status IN ('Pending', 'Paused')
@@ -1025,6 +1116,15 @@ def get_existing_recommendation(conn, sku):
   row = cursor.fetchone()
 
   if row:
+    # v5.36: the held-order qty the rec was last written with lives in its
+    # ORDER HOLD prefix (no column). 0 when the prefix is absent.
+    _old_hold = 0
+    try:
+      _m = re.search(r'ORDER HOLD:.*?\((\d+) of (\d+) on open orders', row['reasoning_head'] or '')
+      if _m:
+        _old_hold = int(_m.group(1))
+    except Exception:
+      _old_hold = 0
     return {
       'exists': True,
       'recommendation_id': row['recommendation_id'],
@@ -1045,6 +1145,7 @@ def get_existing_recommendation(conn, sku):
         'hub_available': float(row['hub_available'] or 0),
         'starlite_available': float(row['starlite_available'] or 0),
         'e21_in_transit_qty': float(row['e21_in_transit_qty'] or 0),
+        'order_hold_qty': _old_hold,                       # v5.36
       },
     }
 
@@ -1109,6 +1210,12 @@ def _gate_input_changes(existing, candidate):
     changes.append('e21 in-transit: %d->%d' % (int(old_e21), int(new_e21)))
   if bool(candidate.get('has_duplicate_warning')) != bool(existing.get('has_duplicate_warning')):
     changes.append('warning %s' % ('raised' if candidate.get('has_duplicate_warning') else 'cleared'))
+  # v5.36: a held order releasing (or a new one going on hold) changes what
+  # the AI should size, even though available/demand do not move.
+  new_hold = int(candidate.get('order_hold_qty') or 0)
+  old_hold = int(old.get('order_hold_qty') or 0)
+  if new_hold != old_hold:
+    changes.append('order hold: %d->%d' % (old_hold, new_hold))
   return changes
 
 
@@ -1914,6 +2021,7 @@ def save_recommendation(conn, candidate, ai_result, batch_id, status='Pending'):
     """
 
   # v5.5: prepend duplicate warning (if any) so it leads the reasoning text.
+  # v5.36: the ORDER HOLD line goes first of all.
   base_reasoning = ai_result.get('reasoning', '')
   warning_text = candidate.get('duplicate_warning_text') or ''
   has_warning = 1 if candidate.get('has_duplicate_warning') else 0
@@ -1922,6 +2030,8 @@ def save_recommendation(conn, candidate, ai_result, batch_id, status='Pending'):
     full_reasoning = warning_text + '\n\n' + base_reasoning
   else:
     full_reasoning = base_reasoning
+  if candidate.get('order_hold_text'):
+    full_reasoning = candidate['order_hold_text'] + '\n\n' + full_reasoning
 
   # HARD CAP: AI cannot recommend more than hub_available, and (v5.34,
   # review H2) not more than max(calculated need, Starlite max_stock).
@@ -2097,6 +2207,7 @@ def update_recommendation(conn, recommendation_id, candidate, ai_result, batch_i
     update_note = ''  # No note if nothing meaningful changed
 
   # v5.5: prepend duplicate warning (if any) so it leads the reasoning text.
+  # v5.36: the ORDER HOLD line goes first of all.
   base_reasoning = ai_result.get('reasoning', '')
   warning_text = candidate.get('duplicate_warning_text') or ''
   has_warning = 1 if candidate.get('has_duplicate_warning') else 0
@@ -2105,6 +2216,8 @@ def update_recommendation(conn, recommendation_id, candidate, ai_result, batch_i
     full_reasoning = warning_text + '\n\n' + base_reasoning
   else:
     full_reasoning = base_reasoning
+  if candidate.get('order_hold_text'):
+    full_reasoning = candidate['order_hold_text'] + '\n\n' + full_reasoning
 
   conf_level = ai_result.get('confidence_level', 'Medium')
 
@@ -2577,6 +2690,22 @@ HOW TO READ THE NUMBERS FOR A DEMAND EVENT (Type 2):
 - Demand Overdue > 0 means orders whose ship date has ALREADY PASSED (today is """ + str(today) + """). Overdue demand is the most urgent demand there is - never reason that it is "far in the future".
 """
 
+  # v5.36: held sales orders. They are still demand in the numbers above,
+  # so the model must be told which part of the need is conditional and
+  # to size the RELEASED shortfall only.
+  _hold_qty = int(candidate.get('order_hold_qty') or 0)
+  if _hold_qty > 0:
+    _calc = int(candidate.get('suggested_transfer_qty') or 0)
+    _released = max(0, _calc - _hold_qty)
+    prompt = prompt + """
+SALES ORDERS ON HOLD (e21 status 00) - READ THIS BEFORE SIZING:
+- """ + str(_hold_qty) + """ of the """ + str(int(candidate.get('order_hold_total') or 0)) + """ open-order units for this SKU are on orders at status HOLD: """ + ', '.join(candidate.get('order_hold_lines') or []) + """.
+- A held order cannot ship and may never be released. The Hub Manager will decide separately (with Sales) whether to send stock for it.
+- Do NOT size this transfer for held units. RELEASED SHORTFALL = calculated qty (""" + str(_calc) + """) minus held units (""" + str(_hold_qty) + """), floored at 0 = """ + str(_released) + """.
+- Your recommended_qty must not exceed """ + str(_released) + """ units""" + (" (a released shortfall of 0 means recommend 0 and say why)" if _released == 0 else "") + """. For a stocked item, forward stocking toward Max is still allowed, but never count held orders as demand.
+- In your reasoning say plainly that """ + str(_hold_qty) + """ held unit(s) were excluded and that the manager should confirm with Sales before shipping them.
+"""
+
   prompt = prompt + """
 CRITICAL CONSTRAINTS:
 - Your recommended_qty CANNOT exceed Hub Available (""" + str(candidate['hub_available']) + """ units)
@@ -2922,11 +3051,35 @@ def _check_view_data_freshness(conn):
   empty = [t for t, c in counts.items() if c == 0]
   stale = [t for t, a in age_minutes.items() if a is not None and a > limits.get(t, threshold)]
 
+  # v5.35.3: a table that may legitimately be empty is re-counted after a
+  # pause; if it is STILL empty the loader is not mid-truncate (that lasts
+  # well under a minute) - there is simply nothing in transit. Accept it.
+  empty_accepted = []
+  for t in list(empty):
+    if t in _MAY_BE_EMPTY:
+      time.sleep(_EMPTY_RECHECK_SECONDS)
+      cursor.execute(f"SELECT COUNT(*) AS cnt FROM {t}")
+      counts[t] = int(cursor.fetchone()['cnt'])
+      if counts[t] == 0:
+        empty.remove(t)
+        empty_accepted.append(t)
+      else:
+        # It was mid-reload; it is populated now. Re-run the age check.
+        ts_col = next((e[2] for e in _FRESHNESS_TABLES if e[0] == t and len(e) > 2), None)
+        empty.remove(t)
+        if ts_col is not None:
+          cursor.execute(f"SELECT DATEDIFF(MINUTE, MAX({ts_col}), GETDATE()) AS age_min FROM {t}")
+          row = cursor.fetchone()
+          age_minutes[t] = int(row['age_min']) if row and row['age_min'] is not None else None
+          if age_minutes[t] is not None and age_minutes[t] > limits.get(t, threshold):
+            stale.append(t)
+
   return (
     len(empty) == 0 and len(stale) == 0,
     {
       'counts':            counts,
       'empty':             empty,
+      'empty_accepted':    empty_accepted,   # v5.35.3
       'age_minutes':       age_minutes,
       'stale':             stale,
       'threshold_minutes': threshold,
@@ -2938,8 +3091,66 @@ def _check_view_data_freshness(conn):
 # MAIN BACKGROUND TASK
 # =============================================================================
 
+_RUN_LOCK_NAME = 'transfer_review_run'
+
+
+def _acquire_run_lock(conn):
+  """
+  v5.35.4: ONE review at a time. Takes the SQL Server application lock
+  'transfer_review_run' (sp_getapplock, Exclusive, owner = Session) on the
+  given connection. The lock lives exactly as long as that connection, so a
+  run that finishes, errors or is killed releases it without any bookkeeping.
+  Returns True when this run owns the lock, False when another run does.
+  Fails OPEN (True) on an unexpected error - running twice was the old
+  behaviour; refusing to run at all would be a new failure mode.
+
+  Why: on 2026-09-23 a manual 'Run Review Now' overlapped the 08:33
+  scheduled firing. Both reviewed the same 20 candidates; each checked for
+  an existing rec while the other was waiting on Claude, and four SKUs got
+  two identical Pending recs ten seconds apart (4129/4130, 4131/4132,
+  4133/4134, 4135/4136).
+  """
+  try:
+    cursor = conn.cursor()
+    cursor.execute(
+      "EXEC sp_getapplock @Resource = %s, @LockMode = 'Exclusive', "
+      "@LockOwner = 'Session', @LockTimeout = 0",
+      (_RUN_LOCK_NAME,))
+    cursor.execute("SELECT APPLOCK_MODE('public', %s, 'Session') AS mode", (_RUN_LOCK_NAME,))
+    row = cursor.fetchone()
+    return bool(row) and str(row['mode'] or '').lower() == 'exclusive'
+  except Exception as e:
+    print('run lock: could not take the application lock (%s) - running anyway' % e)
+    return True
+
+
 @anvil.server.background_task
 def run_transfer_review():
+  """
+  v5.35.4 wrapper: take the run lock on a dedicated connection, run the
+  review, release the lock by closing that connection. A second run that
+  starts while the lock is held logs one row and exits at once - before
+  the business-hours and freshness gates, so it never waits on them.
+  """
+  _lock_conn = None
+  try:
+    _lock_conn = get_connection()
+    if not _acquire_run_lock(_lock_conn):
+      try:
+        log_action(_lock_conn, 'Transfer_Review_Skipped_Already_Running', None, '',
+                   'Another transfer review holds the run lock',
+                   datetime.now().strftime('%Y-%m-%d %H:%M UTC') + f' (v{__version__})')
+      except Exception:
+        pass
+      anvil.server.task_state['status'] = 'Skipped - another review is running'
+      return {'status': 'skipped_already_running'}
+    return _run_transfer_review_body()
+  finally:
+    if _lock_conn is not None:
+      _lock_conn.close()      # releases the application lock
+
+
+def _run_transfer_review_body():
   """
   Main background task for transfer review.
   Runs on schedule or on-demand to analyze transfer candidates.
@@ -3018,6 +3229,10 @@ def run_transfer_review():
   try:
     _fresh_conn = get_connection()
     _is_fresh, _fresh_info = _check_view_data_freshness(_fresh_conn)
+    if _is_fresh and _fresh_info.get('empty_accepted'):
+      # v5.35.3: visible, but quiet - one row per firing, no skip.
+      print('freshness gate: empty accepted for %s (nothing in transit)'
+            % ', '.join(_fresh_info['empty_accepted']))
     if not _is_fresh:
       _empty_csv = ', '.join(_fresh_info['empty']) if _fresh_info['empty'] else ''
       _stale_csv = ', '.join(
@@ -3077,6 +3292,8 @@ def run_transfer_review():
     'touched': 0,         # v5.35: existing recs refreshed without the AI
     'touch_reasons': {},  # v5.35: paused / warned / unchanged counts
     'deferred': 0,        # v5.35: re-reviews pushed to the next batch (cap)
+    'woken': 0,           # v5.36: snoozes whose date arrived -> Pending
+    'order_holds': 0,     # v5.36: candidates carrying an ORDER HOLD line
     'obsoleted': 0,    # Track stale recommendations marked obsolete
     'skipped': 0,
     'errors': 0,
@@ -3085,6 +3302,20 @@ def run_transfer_review():
 
   try:
     conn = get_connection()
+
+    # =========================================================================
+    # v5.36: snoozes whose until-date has arrived come back to Pending
+    # BEFORE the candidate snapshot, the stale sweep and the loop, so this batch sees
+    # them as human-touched Pending recs and re-reviews them.
+    # =========================================================================
+    anvil.server.task_state['status'] = 'Waking expired snoozes'
+    try:
+      from . import transfer_dashboard as _td
+      results['woken'] = _td.wake_expired_snoozes(conn, performed_by='snooze_expired')
+    except Exception as we:
+      conn.rollback()
+      results['errors'] += 1
+      log_action(conn, 'Transfer_Review_Error', None, 'wake_expired_snoozes', str(we), 'Batch:' + batch_id)
 
     # v5.32: snapshot the DB clock BEFORE candidates are fetched. Any rec
     # the Hub Manager moves to Approved/Applied AFTER this instant was not
@@ -3187,6 +3418,26 @@ def run_transfer_review():
         candidate['has_duplicate_warning'] = False
         candidate['duplicate_warning_text'] = ''
     results['duplicate_warnings'] = duplicate_warnings_count
+
+    # v5.36: ORDER HOLD annotation (fail-open: a lookup error means no line).
+    anvil.server.task_state['status'] = 'Checking held sales orders'
+    try:
+      order_holds = check_order_holds_batch(conn, ai_review_candidates, planning_horizon_days)
+    except Exception as hold_err:
+      log_action(conn, 'Order_Hold_Check_Error', None, str(hold_err), '', 'Batch:' + batch_id)
+      order_holds = {}
+    for candidate in ai_review_candidates:
+      h = order_holds.get((candidate.get('sku') or '').strip())
+      if h:
+        candidate['order_hold_qty'] = h['held_qty']
+        candidate['order_hold_total'] = h['total_qty']
+        candidate['order_hold_lines'] = h['lines']
+        candidate['order_hold_text'] = h['text']
+        results['order_holds'] += 1
+      else:
+        candidate['order_hold_qty'] = 0
+        candidate['order_hold_lines'] = []
+        candidate['order_hold_text'] = ''
 
     # AI Review ALL candidates
     anvil.server.task_state['status'] = 'AI reviewing'
@@ -3424,6 +3675,8 @@ def run_transfer_review():
                ', AIcalls:' + str(results.get('ai_calls', 0)) +
                ', Touched:' + str(results.get('touched', 0)) +
                ', Deferred:' + str(results.get('deferred', 0)) +
+               ', Woken:' + str(results.get('woken', 0)) +
+               ', Holds:' + str(results.get('order_holds', 0)) +
                ', Err:' + str(results['errors']))
     log_action(conn, 'Transfer_Review_Batch', None, 'Candidates:' + str(len(candidates)), summary, 'Batch:' + batch_id)
 

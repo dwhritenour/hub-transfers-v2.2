@@ -50,6 +50,16 @@ components:
     text: SKU Exceptions
   type: Button
 - event_bindings: {}
+  layout_properties: {grid_position: 'BVLNAQ,GCZNVW'}
+  name: btn_snoozed
+  properties:
+    icon: fa:clock-o
+    role: elevated-button
+    spacing:
+      padding: [null, '30', null, '30']
+    text: SKU Snoozed
+  type: Button
+- event_bindings: {}
   layout_properties: {grid_position: 'SEQLNZ,ZJUAWZ'}
   name: btn_processed
   properties:

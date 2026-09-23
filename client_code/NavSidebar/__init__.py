@@ -12,6 +12,7 @@ class NavSidebar(NavSidebarTemplate):
     'trip_editor':            'btn_trip_form',
     'driver_deliver':         'btn_deliver',
     'exceptions':             'btn_exceptions',
+    'snoozed':                'btn_snoozed',        # v2.2: Snoozed SKUs form
     'processed_transfers':    'btn_processed',
     'zero_stock':             'btn_zerostock',
     'abc_classification':     'btn_abcclass',
@@ -26,6 +27,7 @@ class NavSidebar(NavSidebarTemplate):
     'btn_trip_form':      'trip_editor',
     'btn_deliver':        'driver_deliver',
     'btn_exceptions':     'exceptions',
+    'btn_snoozed':        'snoozed',              # v2.2 (button added in the designer)
     'btn_processed':      'processed_transfers',
     'btn_zerostock':      'zero_stock',
     'btn_abcclass':       'abc_classification',

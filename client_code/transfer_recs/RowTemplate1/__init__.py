@@ -1,7 +1,23 @@
 """
-RowTemplate1 - Transfer Recommendations Row Template  (v5.17 candidate)
-======================================================================
+RowTemplate1 - Transfer Recommendations Row Template  (Hub Transfers v2.2)
+=========================================================================
 Client-side code for individual rows in the DataGrid.
+
+2026-09-23 (v2.2 SNOOZE + ORDER HOLD):
+- The decision dropdown offers Approve / Reject / SNOOZE (items set here in
+  code; the designer's [Approve, Reject, Pause] is overridden). Choosing
+  Snooze opens a dialog built in code (no designer work): amount to snooze
+  (pre-filled with the held qty, or the whole request), until-date
+  (pre-filled today + snooze_default_days, blank = until woken) and reason
+  (pre-filled with the ORDER HOLD line). Whatever is NOT snoozed ships now
+  - the row's Transfer Quantity box shows that number after the dialog.
+  Apply sends decision 'Paused' + snooze_qty / snooze_until / pause_reason
+  to bulk_update_decisions, which calls transfer_dashboard._snooze_rec.
+- ORDER HOLD: when the server attached order_hold_text, the Sales Orders
+  cell leads with it in dark red on a pink tint, held lines are tagged
+  [HOLD], and the AI-said-0 pre-fill is NOT applied (0 is the right
+  released shortfall; the manager types a qty or snoozes).
+- The Reject snooze date picker (dp_snooze, v5.23) is retired: hidden.
 
 2026-09-18 (with transfer_ai_review 5.35.2): when the AI quantity is 0 but
 the calculated quantity is not, the calc is PRE-FILLED as the override
@@ -30,12 +46,33 @@ Place this file in: client_code/transfer_recs/RowTemplate1/__init__.py
 from ._anvil_designer import RowTemplate1Template
 from anvil import *
 import anvil.server
+from datetime import date, timedelta
+
+_DECISIONS = ['Approve', 'Reject', 'Snooze']
+_HOLD_BG = '#FDE7E9'      # pink tint
+_HOLD_FG = '#8B0000'      # dark red
+
+
+def _num(v, default=0.0):
+  try:
+    return float(v)
+  except Exception:
+    return default
+
+
+def _iso(d):
+  """date -> 'YYYY-MM-DD' without strftime (Skulpt-safe)."""
+  return '%04d-%02d-%02d' % (d.year, d.month, d.day) if d else None
 
 
 class RowTemplate1(RowTemplate1Template):
   def __init__(self, **properties):
     # Set Form properties and Data Bindings
     self.init_components(**properties)
+    self._display_qty = None          # what the qty box showed before a snooze
+
+    # v2.2: Snooze replaces Pause (designer items are overridden here).
+    self.dd_decision.items = _DECISIONS
 
     # -----------------------------------------------------------------
     # Color-code SKU based on status
@@ -89,6 +126,20 @@ class RowTemplate1(RowTemplate1Template):
       self.txt_time_urgency.foreground = '#C62828'   # Material Red 800
       self.txt_time_urgency.bold = True
 
+    # -----------------------------------------------------------------
+    # v2.2 ORDER HOLD: part of this request's demand is on Hold-status
+    # sales orders. Lead the Sales Orders cell with the line, in red.
+    # -----------------------------------------------------------------
+    _hold_text = self.item.get('order_hold_text') or ''
+    self._hold_qty = int(_num(self.item.get('order_hold_qty')))
+    if _hold_text:
+      self.ta_sales_orders.text = _hold_text + '\n' + str(self.item.get('sales_orders') or '')
+      self.ta_sales_orders.background = _HOLD_BG
+      self.ta_sales_orders.foreground = _HOLD_FG
+      self.ta_sales_orders.tooltip = ("Held orders (e21 status 00) may never release. "
+                                      "Confirm with Sales, then ship the released part "
+                                      "or Snooze the held part.")
+
       # -----------------------------------------------------------------
       # Initialize dropdown based on current status
       # -----------------------------------------------------------------
@@ -97,7 +148,7 @@ class RowTemplate1(RowTemplate1Template):
     elif status == 'Rejected':
       self.dd_decision.selected_value = 'Reject'
     elif status == 'Paused':
-      self.dd_decision.selected_value = 'Pause'
+      self.dd_decision.selected_value = 'Snooze'
     else:
       self.dd_decision.selected_value = None  # Pending - no selection
 
@@ -112,6 +163,7 @@ class RowTemplate1(RowTemplate1Template):
       display_qty = self.item.get('ai_recommended_qty') or self.item.get('calculated_transfer_qty')
     if display_qty is not None:
       self.trans_qty.text = str(int(display_qty))
+    self._display_qty = self.trans_qty.text
 
     # 2026-09-18: AI said 0 (or nothing) against a real calculated need.
     # Pre-fill the calc as the override so Approve is one click; amber box
@@ -121,12 +173,21 @@ class RowTemplate1(RowTemplate1Template):
       _calc_q = float(self.item.get('calculated_transfer_qty') or 0)
     except Exception:
       _ai_q, _calc_q = 0.0, 0.0
-    if not override_qty and _ai_q <= 0 and _calc_q > 0:
+    if not override_qty and _ai_q <= 0 and _calc_q > 0 and self._hold_qty <= 0:
       self.item['transfer_qty_override'] = int(_calc_q)
       self.trans_qty.text = str(int(_calc_q))
+      self._display_qty = self.trans_qty.text
       self.trans_qty.background = '#FFF3CD'   # light amber
       self.trans_qty.tooltip = ("AI recommended 0; the calculated qty (%d) is pre-filled. "
                                 "Edit it or Approve as is." % int(_calc_q))
+    elif not override_qty and _ai_q <= 0 and self._hold_qty > 0:
+      # v2.2: 0 is the RELEASED shortfall - the need is on held orders.
+      self.trans_qty.text = '0'
+      self._display_qty = '0'
+      self.trans_qty.background = _HOLD_BG
+      self.trans_qty.tooltip = ("Released shortfall is 0 - the %d unit(s) needed are on held "
+                                "orders. Snooze, or type a quantity to ship them anyway."
+                                % self._hold_qty)
 
     # v5.23 (Phase 2): optional reject-snooze date picker. Wired defensively
     # so the row still loads before dp_snooze is added in the designer.
@@ -146,22 +207,140 @@ class RowTemplate1(RowTemplate1Template):
         """
     selected = self.dd_decision.selected_value
 
+    if selected in ('Approve', 'Reject', None):
+      self._clear_snooze()
     if selected == 'Approve':
       self.item['decision'] = 'Approved'
-      self.item['pause_reason'] = None
     elif selected == 'Reject':
       self.item['decision'] = 'Rejected'
-      self.item['pause_reason'] = None
-    elif selected == 'Pause':
-      self.item['decision'] = 'Paused'
-      # reason = anvil.js.window.prompt("Why are you pausing this transfer?", "")
-      # self.item['pause_reason'] = reason if reason else None
+    elif selected == 'Snooze':
+      if not self._snooze_dialog():
+        # Cancelled: back to no decision.
+        self.dd_decision.selected_value = None
+        self._clear_snooze()
     else:
       self.item['decision'] = None
-      self.item['pause_reason'] = None
 
-    # Show the snooze date picker only when Reject is selected
     self._update_snooze_visibility()
+
+  # =====================================================================
+  # v2.2 SNOOZE DIALOG (built in code - nothing to add in the designer)
+  # =====================================================================
+
+  def _eff_qty(self):
+    """The quantity this request stands at right now (box, override, AI, calc)."""
+    try:
+      if (self.trans_qty.text or '').strip():
+        return int(float(self.trans_qty.text))
+    except Exception:
+      pass
+    for k in ('transfer_qty_override', 'manager_override_qty', 'ai_recommended_qty',
+              'calculated_transfer_qty'):
+      v = self.item.get(k)
+      if v not in (None, ''):
+        try:
+          return int(float(v))
+        except Exception:
+          pass
+    return 0
+
+  def _clear_snooze(self):
+    for k in ('snooze_qty', 'snooze_total', 'snooze_until', 'pause_reason'):
+      self.item[k] = None
+    if self.item.get('_snoozed'):
+      self.item['_snoozed'] = False
+      self.txt_status.text = str(self.item.get('status') or '')
+      self.txt_status.background = None
+      self.trans_qty.text = self._display_qty or ''
+      self.trans_qty.tooltip = ''
+
+  def _snooze_dialog(self):
+    """Amount / until / reason. Returns True when the manager confirmed."""
+    sku = str(self.item.get('sku') or '')
+    eff = self._eff_qty()
+    if eff <= 0:
+      # Nothing sized yet (AI 0 on a hold) - snooze the calc need instead.
+      eff = int(_num(self.item.get('calculated_transfer_qty')))
+    if eff <= 0:
+      alert("This request has no quantity to snooze. Reject it instead.")
+      return False
+    hold = self._hold_qty
+    default_qty = min(hold, eff) if hold > 0 else eff
+    default_days = int(_num(self.item.get('snooze_default_days'), 7))
+    hold_text = self.item.get('order_hold_text') or ''
+
+    lbl_head = Label(text="Snooze %s - this request is %d pc(s)" % (sku, eff), bold=True, font_size=15)
+    lbl_hold = Label(text=hold_text, foreground=_HOLD_FG, visible=bool(hold_text), font_size=12)
+    tb_qty = TextBox(text=str(default_qty), type='number', placeholder='Amount to snooze')
+    dp_until = DatePicker(date=date.today() + timedelta(days=default_days), format='%Y-%m-%d',
+                          placeholder='Until (blank = until you wake it)')
+    ta_reason = TextArea(text=(hold_text.split(' (')[0] if hold_text else ''),
+                         placeholder='Reason (what Sales said, who you asked...)',
+                         auto_expand=True)
+    lbl_ship = Label(text='', italic=True, foreground='#595959')
+
+    def _refresh(**e):
+      try:
+        q = int(float(tb_qty.text or 0))
+      except Exception:
+        q = 0
+      ship = max(0, eff - q) if 0 < q < eff else (0 if q >= eff else eff)
+      if q <= 0:
+        lbl_ship.text = "Enter an amount between 1 and %d." % eff
+      elif q >= eff:
+        lbl_ship.text = "The whole request (%d) is snoozed. Nothing ships now." % eff
+      else:
+        lbl_ship.text = ("%d snoozed; the other %d are APPROVED and ship now (they go to the "
+                         "pick pool when you click Apply)." % (q, ship))
+    tb_qty.set_event_handler('change', _refresh)
+    tb_qty.set_event_handler('lost_focus', _refresh)
+    _refresh()
+
+    panel = ColumnPanel(spacing_above='none', spacing_below='none')
+    panel.add_component(lbl_head)
+    panel.add_component(lbl_hold)
+    panel.add_component(Label(text="Amount to snooze", bold=True))
+    panel.add_component(tb_qty)
+    panel.add_component(lbl_ship)
+    panel.add_component(Label(text="Until", bold=True))
+    panel.add_component(dp_until)
+    panel.add_component(Label(text="Reason", bold=True))
+    panel.add_component(ta_reason)
+
+    while True:
+      ok = alert(content=panel, title="Snooze transfer request", large=True,
+                 buttons=[("Snooze", True), ("Cancel", False)], dismissible=False)
+      if not ok:
+        return False
+      try:
+        q = int(float(tb_qty.text or 0))
+      except Exception:
+        q = 0
+      if q <= 0:
+        alert("Enter an amount between 1 and %d." % eff)
+        continue
+      until = dp_until.date
+      if until is not None and until < date.today():
+        alert("The snooze date is in the past.")
+        continue
+      break
+
+    q = min(q, eff)
+    ship = eff - q
+    self.item['decision'] = 'Paused'
+    self.item['snooze_qty'] = q
+    self.item['snooze_total'] = eff      # the number the manager saw; server splits against it
+    self.item['snooze_until'] = _iso(until)
+    self.item['pause_reason'] = (ta_reason.text or '').strip() or None
+    self.item['_snoozed'] = True
+    # Visual feedback on the row until Apply.
+    until_txt = ('%d/%d' % (until.month, until.day)) if until else 'no date'
+    self.txt_status.text = "SNOOZE %d -> %s" % (q, until_txt)
+    self.txt_status.background = '#FFF3CD'
+    self.trans_qty.text = str(ship)
+    self.trans_qty.tooltip = ("%d ship now (approved on Apply); %d snoozed until %s."
+                              % (ship, q, until_txt))
+    return True
 
   @handle("trans_qty", "lost_focus")
   def trans_qty_lost_focus(self, **event_args):
@@ -181,6 +360,7 @@ class RowTemplate1(RowTemplate1Template):
     self.item['snooze_until'] = self.dp_snooze.date
 
   def _update_snooze_visibility(self):
-    """Show dp_snooze only when the decision dropdown is set to Reject."""
+    """v2.2: the Reject snooze picker is retired (Snooze has its own dialog).
+    Kept so a designer that still has dp_snooze hides it."""
     if hasattr(self, 'dp_snooze'):
-      self.dp_snooze.visible = (self.dd_decision.selected_value == 'Reject')
+      self.dp_snooze.visible = False

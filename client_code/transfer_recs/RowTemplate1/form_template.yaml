@@ -90,10 +90,6 @@ components:
   name: txt_status
   properties: {enabled: false, font_size: 12, foreground: '#000000'}
   type: TextBox
-- layout_properties: {column: ZZSKFW}
-  name: dp_snooze
-  properties: {font_size: 14, visible: false}
-  type: DatePicker
 container:
   properties: {visible: true}
   type: DataRowPanel

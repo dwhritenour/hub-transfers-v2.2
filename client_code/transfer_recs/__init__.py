@@ -10,7 +10,14 @@ import anvil.server
 # subset of the SAME dicts, so a decision made on a row keeps its value
 # when the row is filtered out and Apply still sends it. Reject All only
 # rejects the rows currently visible when a filter is active.
-_STATUS_FILTERS = ['All', 'Pending', 'Paused', 'Warned']
+#
+# 2026-09-23 (v2.2 SNOOZE + ORDER HOLD): snoozed (Paused) recs no longer
+# appear here - they live on the Snoozed SKUs form (#snoozed), so the
+# 'Paused' filter is gone and 'Pending' is implied. New filter 'Order Hold'
+# = rows whose demand is partly on Hold-status sales orders (the red ORDER
+# HOLD line). Apply sends Snooze decisions (amount / until / reason from the
+# row's dialog) and reports what shipped and what was parked.
+_STATUS_FILTERS = ['All', 'Warned', 'Order Hold']
 
 
 class transfer_recs(transfer_recsTemplate):
@@ -88,11 +95,9 @@ class transfer_recs(transfer_recsTemplate):
     for r in self._all_rows:
       if needle and needle not in str(r.get('sku') or '').upper():
         continue
-      if status == 'Pending' and r.get('status') != 'Pending':
-        continue
-      if status == 'Paused' and r.get('status') != 'Paused':
-        continue
       if status == 'Warned' and not r.get('has_duplicate_warning'):
+        continue
+      if status == 'Order Hold' and not r.get('order_hold_qty'):
         continue
       rows.append(r)
     self.rp_transfers.items = rows
@@ -150,7 +155,7 @@ class transfer_recs(transfer_recsTemplate):
         # Training mode: All items go to Pending for review
         self.lbl_stats.text = (
           f"Pending: {stats.get('pending', 0)} | "
-          f"Paused: {stats.get('paused', 0)} | "
+          f"Snoozed: {stats.get('paused', 0)} | "
           f"Approved: {stats.get('approved', 0)} | "
           f"Applied: {stats.get('applied', 0)}"
         )
@@ -300,15 +305,18 @@ class transfer_recs(transfer_recsTemplate):
         }
         # Include quantity override if provided
         qty_override = item.get('transfer_qty_override')
-        if qty_override is not None:
+        if qty_override is not None and decision != 'Paused':
           update['transfer_qty'] = qty_override
-        # v5.23: include the optional reject-snooze date (Rejected rows only)
-        if decision == 'Rejected' and item.get('snooze_until'):
-          update['snooze_until'] = item['snooze_until']
+        # v2.2: Snooze = decision 'Paused' + what the row's dialog collected.
+        if decision == 'Paused':
+          update['snooze_qty'] = item.get('snooze_qty')
+          update['snooze_total'] = item.get('snooze_total')
+          update['snooze_until'] = item.get('snooze_until')
+          update['pause_reason'] = item.get('pause_reason')
         updates.append(update)
 
     if not updates:
-      alert("No decisions to apply. Please select Approve, Reject, or Paused for at least one item.")
+      alert("No decisions to apply. Please select Approve, Reject, or Snooze for at least one item.")
       return
 
       # Confirm with user
@@ -318,7 +326,7 @@ class transfer_recs(transfer_recsTemplate):
 
     confirm_msg = f"Apply {approved_count} approvals, {rejected_count} rejections"
     if paused_count > 0:
-      confirm_msg += f", and {paused_count} paused"
+      confirm_msg += f", and {paused_count} snooze(s)"
     confirm_msg += "?"
     if hidden_decisions > 0:
       confirm_msg += (f"\n\n{hidden_decisions} of these decision(s) are on rows the "
@@ -346,12 +354,32 @@ class transfer_recs(transfer_recsTemplate):
              "set a transfer qty first."
              % len(result['blocked_zero_qty'])))
 
+    # v2.2: say what each snooze did (whole rec parked, or split: part
+    # approved now + the rest parked on the Snoozed SKUs form).
+    _snoozed = result.get('snoozed') or []
+    _split_ship = sum(int(x.get('ship_qty') or 0) for x in _snoozed if x.get('mode') == 'split')
+    if _snoozed:
+      lines = []
+      for x in _snoozed:
+        if x.get('mode') == 'split':
+          lines.append("%s: %d approved now, %d snoozed until %s"
+                       % (x.get('sku'), int(x.get('ship_qty') or 0),
+                          int(x.get('snooze_qty') or 0), x.get('until')))
+        else:
+          lines.append("%s: %d snoozed until %s"
+                       % (x.get('sku'), int(x.get('snooze_qty') or 0), x.get('until')))
+      Notification("Snoozed - see the Snoozed SKUs form:\n" + "\n".join(lines),
+                   timeout=8).show()
+    if result.get('snooze_errors'):
+      alert(result.get('message') or 'Some snoozes were refused.')
+
     # v2.0 (B3): approvals stay 'Approved' and appear in the Pick
     # Editor's pool - pick creation is what "applies" them now, and
     # slips print per pick. The old apply_transfers batch step is gone.
-    if approved_count > 0:
+    if approved_count > 0 or _split_ship > 0:
       Notification(
-        f"{approved_count} approval(s) sent to the Pick Editor pool."
+        f"{approved_count + sum(1 for x in _snoozed if x.get('mode') == 'split')} "
+        f"approval(s) sent to the Pick Editor pool."
       ).show()
 
       # Refresh the grid to show remaining pending items
