@@ -36,6 +36,9 @@ Changelog
     - wake_snoozed / resnooze / reject_snoozed for the #snoozed row actions.
       Every action writes ai_agent_log (REC_SNOOZED, REC_SNOOZE_SPLIT,
       REC_SNOOZE_EXPIRED, REC_WOKEN, REC_RESNOOZED, REC_REJECTED_FROM_SNOOZE).
+    - Notes stamps use DB time (GETDATE, Eastern) via _db_stamp, matching
+      paused_date / reviewed_date on the same row (first live test 2026-09-23
+      showed 16:08 in notes vs 12:08 in the columns).
   2026-09-05 (Transfer Logic Review findings H1 / H3 / M7):
     - Every decision UPDATE re-asserts status IN ('Pending','Paused').
       A grid loaded 20 minutes ago can no longer resurrect a rec the
@@ -263,6 +266,15 @@ def _db_today(conn):
   return cur.fetchone()['today']
 
 
+def _db_stamp(conn):
+  """'YYYY-MM-DD HH:MM' in DATABASE time (Eastern), for the notes trail.
+  Anvil's datetime.now() is UTC and was stamping notes 4 h ahead of the
+  paused_date / reviewed_date / ai_agent_log columns on the same row."""
+  cur = conn.cursor()
+  cur.execute("SELECT CONVERT(varchar(16), GETDATE(), 120) AS stamp")
+  return cur.fetchone()['stamp']
+
+
 def _parse_snooze_date(value, today):
   """'YYYY-MM-DD' / date / datetime / None -> date or None (None = no date).
   Must be today or later (DB clock, Eastern)."""
@@ -351,7 +363,7 @@ def _snooze_rec(conn, recommendation_id, snooze_qty, snooze_until, reason,
   if snooze_qty <= 0:
     raise Exception("Snooze quantity must be at least 1.")
 
-  stamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+  stamp = _db_stamp(conn)
   until_txt = _fmt_date(until)
 
   # ---------------------------------------------------------- whole rec
@@ -484,7 +496,7 @@ def wake_expired_snoozes(conn, performed_by='snooze_expired'):
   due = list(cur.fetchall())
   if not due:
     return 0
-  stamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+  stamp = _db_stamp(conn)
   woken = 0
   for r in due:
     cur.execute("""
@@ -576,7 +588,7 @@ def wake_snoozed(recommendation_id, note=None, reviewed_by=_HUB_MANAGER):
   try:
     cur = conn.cursor()
     note = (note or '').strip()
-    stamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+    stamp = _db_stamp(conn)
     cur.execute("""
         UPDATE dbo.ai_transfer_recommendations
         SET status = 'Pending',
@@ -613,7 +625,7 @@ def resnooze(recommendation_id, snooze_until=None, note=None, reviewed_by=_HUB_M
     cur = conn.cursor()
     until = _parse_snooze_date(snooze_until, _db_today(conn))
     note = (note or '').strip()
-    stamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+    stamp = _db_stamp(conn)
     cur.execute("""
         UPDATE dbo.ai_transfer_recommendations
         SET snooze_until = %s,
@@ -650,7 +662,7 @@ def reject_snoozed(recommendation_id, note=None, reviewed_by=_HUB_MANAGER):
   try:
     cur = conn.cursor()
     note = (note or '').strip()
-    stamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+    stamp = _db_stamp(conn)
     cur.execute("""
         UPDATE dbo.ai_transfer_recommendations
         SET status = 'Rejected',
