@@ -253,9 +253,22 @@ This ensures the Hub Manager always sees current data when reviewing.
 #                        short-circuit makes them unreachable for the
 #                        cases that matter.
 # =============================================================================
-__version__       = "5.36.0"
-__version_date__  = "2026-09-23"
+__version__       = "5.36.1"
+__version_date__  = "2026-09-24"
 __version_notes__ = (
+  "5.36.1 (2026-09-24, SNOOZE EARLY WAKE): a snoozed rec is the SKU's one "
+  "open rec, so while it sleeps nothing new is raised for that SKU. It "
+  "now wakes BEFORE its date when the picture changes against the numbers "
+  "it was snoozed on: (a) the held order releases (held qty drops), (b) the "
+  "need grows by more than snooze_wake_qty_increase_pct (20%) beyond any "
+  "growth in held qty, or (c) urgency climbs to HIGH/CRITICAL above what it "
+  "was. The rec goes back to Pending (reviewed_by snooze_early_wake, notes "
+  "say why, ai_agent_log REC_SNOOZE_WOKEN_EARLY) and the gate re-reviews "
+  "it with fresh numbers in the same batch. To make 'the numbers it was "
+  "snoozed on' mean something, a snoozed rec's snapshot is no longer "
+  "touched every batch (live numbers are on the Snoozed form anyway). "
+  "Switch: global_parameters.snooze_early_wake_enabled (1). Summary adds "
+  "WokenEarly:N. "
   "5.36.0 (2026-09-23, Hub Transfers v2.2 SNOOZE + ORDER HOLD): (0) one "
   "review at a time - the run takes the 'transfer_review_run' application "
   "lock (sp_getapplock, session-owned) and a second concurrent run exits "
@@ -1104,7 +1117,7 @@ def get_existing_recommendation(conn, sku):
            has_duplicate_warning,
            calculated_transfer_qty, time_urgency, inventory_urgency,
            event_type, total_demand, hub_available, starlite_available,
-           e21_in_transit_qty,
+           e21_in_transit_qty, snooze_until,
            LEFT(CAST(reasoning AS nvarchar(max)), 400) AS reasoning_head
     FROM dbo.ai_transfer_recommendations
     WHERE sku = %s
@@ -1134,6 +1147,7 @@ def get_existing_recommendation(conn, sku):
       'recommendation_date': row['recommendation_date'],   # = last AI review
       'reviewed_date': row['reviewed_date'],               # last human action
       'paused_date': row['paused_date'],
+      'snooze_until': row['snooze_until'],                 # v5.36.1
       'has_duplicate_warning': bool(row['has_duplicate_warning']),
       'old_values': {
         'ai_recommended_qty': float(row['ai_recommended_qty'] or 0),
@@ -1164,6 +1178,10 @@ def get_existing_recommendation(conn, sku):
 #   ai_skip_paused              1  Paused recs are never sent to the AI
 #   ai_skip_warned              1  recs with a duplicate / UNRECEIVED E21
 #                                  warning are never sent to the AI
+#   snooze_early_wake_enabled   1  v5.36.1: wake a snoozed rec before its
+#                                  date when the picture changes (below)
+#   snooze_wake_qty_increase_pct 0.20  ... when the need grows by more than
+#                                  this share of the calc it was snoozed on
 # =============================================================================
 
 _GATE_DEFAULTS = {
@@ -1171,6 +1189,8 @@ _GATE_DEFAULTS = {
   'ai_max_reviews_per_batch': 25.0,
   'ai_skip_paused': 1.0,
   'ai_skip_warned': 1.0,
+  'snooze_early_wake_enabled': 1.0,      # v5.36.1
+  'snooze_wake_qty_increase_pct': 0.20,  # v5.36.1
 }
 
 
@@ -1181,7 +1201,9 @@ def _gate_params(conn):
     cursor.execute("""
       SELECT parameter_name, parameter_value FROM dbo.global_parameters
       WHERE parameter_name IN ('ai_rereview_hours', 'ai_max_reviews_per_batch',
-                               'ai_skip_paused', 'ai_skip_warned')
+                               'ai_skip_paused', 'ai_skip_warned',
+                               'snooze_early_wake_enabled',
+                               'snooze_wake_qty_increase_pct')
     """)
     for row in cursor.fetchall():
       try:
@@ -1331,6 +1353,86 @@ def touch_recommendation(conn, recommendation_id, candidate, previous_status):
     conn.rollback()      # a manager moved it mid-batch; their decision wins
     return False
   conn.commit()
+  return True
+
+
+# =============================================================================
+# v5.36.1 SNOOZE EARLY WAKE
+# =============================================================================
+# A snoozed (Paused) rec is the SKU's one open rec: get_existing_recommendation
+# returns it, so no new rec is raised for the SKU while it sleeps. That is
+# the point of a snooze - but only while the picture the Hub Manager snoozed
+# is still the picture. Three things change it enough to bring the rec back
+# before its date, each compared against the snapshot the rec was snoozed
+# on (which 5.36.1 stops touching - see the run loop):
+#   (a) the held order released: held qty now < held qty then
+#   (b) the need grew: calc now exceeds the snoozed calc by more than
+#       snooze_wake_qty_increase_pct, and by more than the held qty grew
+#       (more units going on hold is not a reason to ship)
+#   (c) urgency climbed to HIGH / CRITICAL from below that
+# The rec goes back to Pending with reviewed_date stamped, so the gate treats
+# it as human-touched and re-reviews it with fresh numbers in this batch.
+# =============================================================================
+
+_EARLY_WAKE_MIN_RANK = 3   # HIGH in _REJECT_URGENCY_RANK (defined below)
+
+
+def _snooze_early_wake_reason(existing, candidate, gate):
+  """Why a snoozed rec should wake now, or None to let it sleep."""
+  if float(gate.get('snooze_early_wake_enabled', 1.0) or 0) < 1:
+    return None
+  old = existing.get('old_values') or {}
+
+  hold_then = int(old.get('order_hold_qty') or 0)
+  hold_now = int(candidate.get('order_hold_qty') or 0)
+  if hold_now < hold_then:
+    return 'held order released: held qty %d->%d' % (hold_then, hold_now)
+
+  # (b) skipped on a duplicate warning: between the 1-hour fresh window and
+  # the next e21 refresh the calc can re-include a part already shipped.
+  if not candidate.get('has_duplicate_warning'):
+    calc_then = float(old.get('calculated_transfer_qty') or 0)
+    calc_now = float(candidate.get('suggested_transfer_qty') or 0)
+    pct = float(gate.get('snooze_wake_qty_increase_pct', 0.20) or 0)
+    growth = calc_now - calc_then
+    if growth > max(1.0, pct * calc_then) and growth > (hold_now - hold_then):
+      return 'need grew %d->%d (> +%d%%)' % (int(calc_then), int(calc_now), int(pct * 100))
+
+  old_rank = _urgency_rank(old.get('time_urgency'), old.get('inventory_urgency'))
+  new_rank = _urgency_rank(candidate.get('time_urgency'), candidate.get('inventory_urgency'))
+  if new_rank > old_rank and new_rank >= _EARLY_WAKE_MIN_RANK:
+    return 'urgency climbed %s/%s -> %s/%s' % (
+      old.get('time_urgency'), old.get('inventory_urgency'),
+      candidate.get('time_urgency'), candidate.get('inventory_urgency'))
+  return None
+
+
+def _wake_snoozed_early(conn, existing, sku, why, batch_id):
+  """Paused -> Pending now, notes + ai_agent_log say why. False if the rec
+  is no longer Paused (a manager moved it since the batch read it)."""
+  rec_id = existing['recommendation_id']
+  until = existing.get('snooze_until')
+  until_txt = until.strftime('%Y-%m-%d') if until else 'no date'
+  cursor = conn.cursor()
+  cursor.execute("SELECT CONVERT(varchar(16), GETDATE(), 120) AS stamp")
+  stamp = cursor.fetchone()['stamp']
+  cursor.execute("""
+    UPDATE dbo.ai_transfer_recommendations
+    SET status = 'Pending',
+        snooze_until = NULL,
+        reviewed_by = 'snooze_early_wake',
+        reviewed_date = GETDATE(),
+        notes = CONCAT(ISNULL(CAST(notes AS nvarchar(max)), ''), %s)
+    WHERE recommendation_id = %s AND status = 'Paused'
+  """, (' | [%s] Woken early (was until %s): %s - back to Pending' % (stamp, until_txt, why),
+        rec_id))
+  if cursor.rowcount != 1:
+    conn.rollback()
+    return False
+  conn.commit()
+  log_action(conn, 'REC_SNOOZE_WOKEN_EARLY', sku,
+             'rec %s Paused until %s' % (rec_id, until_txt), 'Pending',
+             why + ' Batch:' + batch_id, executed_by='snooze_early_wake')
   return True
 
 
@@ -3293,6 +3395,7 @@ def _run_transfer_review_body():
     'touch_reasons': {},  # v5.35: paused / warned / unchanged counts
     'deferred': 0,        # v5.35: re-reviews pushed to the next batch (cap)
     'woken': 0,           # v5.36: snoozes whose date arrived -> Pending
+    'woken_early': 0,     # v5.36.1: snoozes woken by a change in the picture
     'order_holds': 0,     # v5.36: candidates carrying an ORDER HOLD line
     'obsoleted': 0,    # Track stale recommendations marked obsolete
     'skipped': 0,
@@ -3512,6 +3615,32 @@ def _run_transfer_review_body():
           continue
 
       # ─────────────────────────────────────────────────────────────────
+      # v5.36.1 snoozed rec: wake it early if the picture changed against
+      # the numbers it was snoozed on; otherwise leave it exactly as it is
+      # (no touch - the stored snapshot IS the baseline; the Snoozed form
+      # shows live numbers from the view).
+      # ─────────────────────────────────────────────────────────────────
+      if existing['exists'] and existing['status'] == 'Paused':
+        why = None
+        try:
+          why = _snooze_early_wake_reason(existing, candidate, gate)
+          if why and not _wake_snoozed_early(conn, existing, sku, why, batch_id):
+            why = None                      # moved by a manager meanwhile
+        except Exception as ewe:
+          conn.rollback()
+          results['errors'] += 1
+          log_action(conn, 'Transfer_Review_Error', sku, 'early wake', str(ewe), batch_id)
+          why = None
+        if why:
+          results['woken_early'] += 1
+          existing['status'] = 'Pending'
+          existing['reviewed_date'] = gate_now   # gate: human-touched -> review
+        elif gate['ai_skip_paused'] >= 1:
+          results['touch_reasons']['paused (snapshot kept)'] = \
+            results['touch_reasons'].get('paused (snapshot kept)', 0) + 1
+          continue
+
+      # ─────────────────────────────────────────────────────────────────
       # v5.35 re-review gate: only call the AI when it has something new
       # to say. Otherwise refresh the snapshot (touch) or, if the per-
       # batch cap is spent, leave the rec alone for the next batch.
@@ -3676,6 +3805,7 @@ def _run_transfer_review_body():
                ', Touched:' + str(results.get('touched', 0)) +
                ', Deferred:' + str(results.get('deferred', 0)) +
                ', Woken:' + str(results.get('woken', 0)) +
+               ', WokenEarly:' + str(results.get('woken_early', 0)) +
                ', Holds:' + str(results.get('order_holds', 0)) +
                ', Err:' + str(results['errors']))
     log_action(conn, 'Transfer_Review_Batch', None, 'Candidates:' + str(len(candidates)), summary, 'Batch:' + batch_id)
