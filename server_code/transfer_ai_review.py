@@ -253,9 +253,17 @@ This ensures the Hub Manager always sees current data when reviewing.
 #                        short-circuit makes them unreachable for the
 #                        cases that matter.
 # =============================================================================
-__version__       = "5.36.1"
+__version__       = "5.36.2"
 __version_date__  = "2026-09-24"
 __version_notes__ = (
+  "5.36.2 (2026-09-24): (a) the notes stamps this module writes ('[stamp] AI "
+  "qty: 9->5', Obsolete sweeps) are DB time (GETDATE, Eastern) like every "
+  "other stamp on the row - Anvil's clock is UTC and they read 4 h ahead. "
+  "(b) A new rec that is ALL held - AI qty 0 on an ORDER HOLD (rec 4166, "
+  "DS696C0600, 08:27 today) - no longer texts the Hub Managers; there is "
+  "nothing to ship yet. The text goes out on the batch where the hold "
+  "releases and the AI qty becomes > 0 (the only 'change' that counts as "
+  "new for SMS since 5.34.3). SMS_Notification_Skipped says 'all held'. "
   "5.36.1 (2026-09-24, SNOOZE EARLY WAKE): a snoozed rec is the SKU's one "
   "open rec, so while it sleeps nothing new is raised for that SKU. It "
   "now wakes BEFORE its date when the picture changes against the numbers "
@@ -1622,7 +1630,7 @@ def mark_stale_recommendations_obsolete(conn, batch_id):
                       for row in cursor.fetchall()}
 
   obsoleted_skus = []
-  timestamp = datetime.now().strftime('%Y-%m-%d %H:%M')
+  timestamp = _db_stamp(conn)   # v5.36.2: DB time
 
   for record in stale_records:
     rec_id = record['recommendation_id']
@@ -1741,7 +1749,7 @@ def mark_stale_recommendations_obsolete(conn, batch_id):
 
   zero_qty_obsoleted = []
   if zero_qty_records:
-    timestamp_zq = datetime.now().strftime('%Y-%m-%d %H:%M')
+    timestamp_zq = _db_stamp(conn)   # v5.36.2: DB time
 
     for record in zero_qty_records:
       rec_id = record['recommendation_id']
@@ -1856,7 +1864,7 @@ def mark_stale_recommendations_obsolete(conn, batch_id):
 
   stranded_obsoleted = []
   if stranded_records:
-    timestamp_st = datetime.now().strftime('%Y-%m-%d %H:%M')
+    timestamp_st = _db_stamp(conn)   # v5.36.2: DB time
 
     for record in stranded_records:
       rec_id = record['recommendation_id']
@@ -2304,7 +2312,7 @@ def update_recommendation(conn, recommendation_id, candidate, ai_result, batch_i
   # Build update note only if meaningful changes occurred
   if changes:
     change_summary = ', '.join(changes)
-    update_note = '\n[' + datetime.now().strftime('%Y-%m-%d %H:%M') + '] ' + change_summary
+    update_note = '\n[' + _db_stamp(conn) + '] ' + change_summary   # v5.36.2: DB time
   else:
     update_note = ''  # No note if nothing meaningful changed
 
@@ -2423,6 +2431,18 @@ def update_recommendation(conn, recommendation_id, candidate, ai_result, batch_i
 
   # Return whether changes were detected (useful for logging)
   return len(changes) > 0
+
+
+def _db_stamp(conn):
+  """'YYYY-MM-DD HH:MM' in DATABASE time (Eastern) for the notes trail.
+  v5.36.2: datetime.now() here is UTC and stamped notes 4 h ahead of the
+  reviewed_date / paused_date / ai_agent_log columns on the same row."""
+  try:
+    cur = conn.cursor()
+    cur.execute("SELECT CONVERT(varchar(16), GETDATE(), 120) AS stamp")
+    return cur.fetchone()['stamp']
+  except Exception:
+    return datetime.now().strftime('%Y-%m-%d %H:%M UTC')
 
 
 def log_action(conn, action_type, sku, old_value, new_value, reason,
@@ -3390,6 +3410,10 @@ def _run_transfer_review_body():
     'updated_with_changes': 0,  # Track updates that had meaningful changes
     'inserted': 0,     # Track inserted vs updated
     'inserted_skus': [],  # v5.34.3: the ONLY SKUs an SMS may name
+    'sms_skus': [],       # v5.36.2: inserted minus all-held (AI 0 on a hold),
+                          #          plus recs whose hold just released
+    'held_no_text': 0,    # v5.36.2: new recs not texted (all held)
+    'hold_released': 0,   # v5.36.2: recs texted because their hold released
     'ai_calls': 0,        # v5.35: Claude calls actually made this batch
     'touched': 0,         # v5.35: existing recs refreshed without the AI
     'touch_reasons': {},  # v5.35: paused / warned / unchanged counts
@@ -3744,6 +3768,25 @@ def _run_transfer_review_body():
           # If no changes, we still updated the record but don't log (reduces noise)
 
           results['updated'] += 1
+
+          # v5.36.2: an all-held rec was not texted when raised (below).
+          # The moment its hold releases and the AI sizes a real shipment,
+          # that IS the news - text it as new.
+          try:
+            if (existing['status'] == 'Pending'
+                and float(existing['previous_ai_qty'] or 0) == 0
+                and int((existing.get('old_values') or {}).get('order_hold_qty') or 0) > 0
+                and float(ai_result.get('recommended_qty') or 0) > 0):
+              results['sms_skus'].append(sku)
+              results['hold_released'] += 1
+              log_action(conn, 'SMS_HOLD_RELEASED', sku,
+                         'rec %s AI 0 (held %d)' % (existing['recommendation_id'],
+                                                    int(existing['old_values']['order_hold_qty'])),
+                         'AI %s, held %d' % (ai_result.get('recommended_qty'),
+                                             int(candidate.get('order_hold_qty') or 0)),
+                         'Hold released - texted as new. Batch:' + batch_id)
+          except Exception:
+            pass
         else:
           # v5.32 mid-run-approval dedupe: the view snapshot for this
           # batch predates any approval made while the batch was running,
@@ -3780,6 +3823,13 @@ def _run_transfer_review_body():
 
           results['inserted'] += 1
           results['inserted_skus'].append(sku)
+          # v5.36.2: all held (AI 0 on an ORDER HOLD) = nothing to ship yet;
+          # it is on the Transfer Form with the red line, but no text.
+          if (float(ai_result.get('recommended_qty') or 0) == 0
+              and int(candidate.get('order_hold_qty') or 0) > 0):
+            results['held_no_text'] += 1
+          else:
+            results['sms_skus'].append(sku)
 
         results['ai_reviewed'] += 1
 
@@ -3820,9 +3870,15 @@ def _run_transfer_review_body():
     # each batch and its quantity drifts on identical inputs, so a
     # change-gated text fired four times an hour and called days-old recs
     # "new". Changes are still logged (Transfer_Recommendation_Updated).
-    sms_gate = results['inserted'] > 0
+    # v5.36.2: the gate and the text use sms_skus - inserted recs minus the
+    # all-held ones (AI 0 on an ORDER HOLD), plus recs whose hold released.
+    sms_skus = list(results.get('sms_skus') or [])
+    sms_gate = len(sms_skus) > 0
+    sms_results = dict(results, inserted=len(sms_skus), inserted_skus=sms_skus)
     print(f"[SMS DEBUG] Gate check: ai_reviewed={results['ai_reviewed']}, "
-          f"inserted={results['inserted']}, updated_with_changes={results['updated_with_changes']}, "
+          f"inserted={results['inserted']}, textable={len(sms_skus)}, "
+          f"held_no_text={results.get('held_no_text', 0)}, "
+          f"hold_released={results.get('hold_released', 0)}, "
           f"gate={'PASS' if sms_gate else 'FAIL'}")
 
     if sms_gate:
@@ -3842,7 +3898,7 @@ def _run_transfer_review_body():
         )
 
         sms_result = sms_notifications.integrate_sms_notification(
-          batch_id, results, dashboard_url
+          batch_id, sms_results, dashboard_url
         )
         print(f"[SMS DEBUG] integrate_sms_notification returned: {sms_result}")
 
@@ -3851,7 +3907,8 @@ def _run_transfer_review_body():
           if sms_result.get('sent_count', 0) > 0:
             log_action(conn, 'SMS_Notification_Sent', None,
                        f"Sent: {sms_result.get('sent_count', 0)}/{sms_result.get('sent_count', 0) + sms_result.get('failed_count', 0)}",
-                       f"New: {results['inserted']}, Changed: {results['updated_with_changes']}",
+                       f"New: {len(sms_skus)} (raised {results['inserted']}, all-held not texted "
+                       f"{results.get('held_no_text', 0)}, hold released {results.get('hold_released', 0)})",
                        f'Batch:{batch_id}')
           else:
             # Log WHY SMS didn't send (no recipients, disabled, error, etc.)
@@ -3879,7 +3936,8 @@ def _run_transfer_review_body():
     else:
       # Gate didn't pass - log WHY so we can diagnose
       log_action(conn, 'SMS_Notification_Skipped', None,
-                 f"Gate failed: ai_reviewed={results['ai_reviewed']}",
+                 (f"{results['inserted']} new rec(s) all held (AI 0 on an ORDER HOLD) - no text"
+                  if results['inserted'] > 0 else f"Gate failed: ai_reviewed={results['ai_reviewed']}"),
                  f"inserted={results['inserted']}, updated={results['updated']}, chg={results['updated_with_changes']}",
                  f'Batch:{batch_id}')
     # =========================================================================
