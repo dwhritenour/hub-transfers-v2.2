@@ -1,8 +1,8 @@
 # =============================================================================
 # snoozed/__init__.py
 # -----------------------------------------------------------------------------
-# Version:       1.0.0
-# Last updated:  2026-09-23
+# Version:       1.1.0
+# Last updated:  2026-09-24
 # Hub Transfers v2.2 - #snoozed: THE SNOOZED SKUs FORM.
 #
 # Every transfer request the Hub Manager has snoozed (status 'Paused'),
@@ -17,14 +17,19 @@
 # cells and dispatches row actions to the server. No event bindings in the
 # designer. See documents/Snooze_Instructions.md for the component list.
 #
+# 1.1.0 (2026-09-24): SKU search, same as the Transfer Form. Designer
+#   components (no bindings): FlowPanel fp_sn_filters holding TextBox
+#   tb_sn_sku, Button btn_sn_clear, Label lbl_sn_count. The list is loaded
+#   once (self._all_rows) and filtered client-side as you type.
+#
 # Server (transfer_dashboard v2.2): get_snoozed_transfers, wake_snoozed,
 #   resnooze, reject_snoozed.
 # Row -> form event: rp_snoozed : x-action (action, recommendation_id,
 #   until, note)
 # =============================================================================
 
-__version__       = "1.0.2"
-__version_date__  = "2026-09-23"
+__version__       = "1.1.0"
+__version_date__  = "2026-09-24"
 
 from ._anvil_designer import snoozedTemplate
 from anvil import *
@@ -80,6 +85,15 @@ class snoozed(snoozedTemplate):
     self.rp_snoozed.set_event_handler('x-action', self.row_action)
     _freeze_first_col(self.dg_snoozed)
 
+    # 1.1.0: SKU search (components optional, so the form still loads if
+    # they are not in the designer yet)
+    self._all_rows = []
+    if hasattr(self, 'tb_sn_sku'):
+      self.tb_sn_sku.set_event_handler('change', self.filter_changed)
+      self.tb_sn_sku.set_event_handler('pressed_enter', self.filter_changed)
+    if hasattr(self, 'btn_sn_clear'):
+      self.btn_sn_clear.set_event_handler('click', self.filter_clear_click)
+
     self.load()
 
   # ------------------------------------------------------------------ load
@@ -93,8 +107,8 @@ class snoozed(snoozedTemplate):
     if result.get('status') != 'success':
       alert("Could not load the snoozed list: %s" % result.get('message', 'unknown error'))
     rows = result.get('rows') or []
-    self.rp_snoozed.items = rows
-    _zebra(self.rp_snoozed)
+    self._all_rows = rows
+    self.apply_filter()
     self.lbl_sn_none.visible = not rows
 
     dated = sum(1 for r in rows if r.get('snooze_until'))
@@ -113,6 +127,36 @@ class snoozed(snoozedTemplate):
 
   def refresh_click(self, **event_args):
     self.load()
+
+  # -------------------------------------------------------------- filter
+
+  def _needle(self):
+    if not hasattr(self, 'tb_sn_sku'):
+      return ''
+    return (self.tb_sn_sku.text or '').strip().upper()
+
+  def apply_filter(self):
+    """Show the subset of self._all_rows whose SKU contains the search text."""
+    needle = self._needle()
+    rows = [r for r in self._all_rows
+            if not needle or needle in str(r.get('sku') or '').upper()]
+    self.rp_snoozed.items = rows
+    _zebra(self.rp_snoozed)
+    if hasattr(self, 'lbl_sn_count'):
+      total = len(self._all_rows)
+      if needle:
+        self.lbl_sn_count.text = ("Showing %d of %d" % (len(rows), total)
+                                  if rows else "No snoozed SKU matches '%s'" % needle)
+      else:
+        self.lbl_sn_count.text = "%d snoozed" % total
+
+  def filter_changed(self, **event_args):
+    self.apply_filter()
+
+  def filter_clear_click(self, **event_args):
+    if hasattr(self, 'tb_sn_sku'):
+      self.tb_sn_sku.text = ''
+    self.apply_filter()
 
   # --------------------------------------------------------------- actions
 
