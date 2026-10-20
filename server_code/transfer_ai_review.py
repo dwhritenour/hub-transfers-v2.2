@@ -253,9 +253,24 @@ This ensures the Hub Manager always sees current data when reviewing.
 #                        short-circuit makes them unreachable for the
 #                        cases that matter.
 # =============================================================================
-__version__       = "5.36.2"
-__version_date__  = "2026-09-24"
+__version__       = "5.36.3"
+__version_date__  = "2026-10-20"
 __version_notes__ = (
+  "5.36.3 (2026-10-20, pick 727 / YS58D0800 + YS80SS0150): (a) a Pending or "
+  "Paused rec whose SKU still needs a transfer but whose Hub stock is gone "
+  "(view hub_available <= 0) is obsoleted with reason Hub_Supply_Exhausted. "
+  "Such a SKU is not a candidate (suggested qty 0), so the rec was never "
+  "touched, re-reviewed or retired: recs 4983/4986 sat 3 days showing Hub "
+  "56/37 after picks 703/704 had emptied the Hub, were approved on those "
+  "numbers, and pick 727 asked for 22 units the Hub did not have. A new rec "
+  "is raised when Hub stock arrives. (b) The AI quantity ceiling is capped "
+  "at hub_effective_on_hand (Hub stock not already claimed by in-flight "
+  "recs), not raw hub_available: rec 4986 was sized at 11 (max_stock) "
+  "against an effective 5. Logged AI_QTY_HUB_EFFECTIVE_CAP when it bites. "
+  "(c) mark_stale_recommendations_obsolete returned early when sweep 1 "
+  "found nothing, so the zero-qty (sweep 2) and stranded-Applied (sweep 3) "
+  "cleanups only ever ran on batches where a SKU had just left the view. "
+  "All three sweeps now run every batch. "
   "5.36.2 (2026-09-24): (a) the notes stamps this module writes ('[stamp] AI "
   "qty: 9->5', Obsolete sweeps) are DB time (GETDATE, Eastern) like every "
   "other stamp on the row - Anvil's clock is UTC and they read 4 h ahead. "
@@ -1096,7 +1111,31 @@ def _apply_qty_ceiling(conn, candidate, ai_result):
     ai_qty = float(ai_result.get('recommended_qty', calc_qty))
   except (TypeError, ValueError):
     ai_qty = calc_qty
-  rec_qty = max(0.0, min(ai_qty, hub_available, ceiling))
+  # v5.36.3: the Hub cap is what the Hub can still send - physical stock
+  # minus what in-flight recs have already claimed (hub_effective_on_hand)
+  # - not raw hub_available. Rec 4986 (2026-10-16): calc 5, max_stock 11,
+  # hub_available 37 but effective 5 -> sized at 11 four minutes after
+  # pick 704 had taken the other 32. NULL effective = unknown -> no cap.
+  hub_cap = hub_available
+  _eff = candidate.get('hub_effective_on_hand')
+  if _eff is not None:
+    try:
+      hub_cap = min(hub_available, max(0.0, float(_eff)))
+    except (TypeError, ValueError):
+      pass
+  rec_qty = max(0.0, min(ai_qty, hub_cap, ceiling))
+  if hub_cap < hub_available and rec_qty < min(ai_qty, ceiling) - 0.0001:
+    ai_result['risk_factors'] = ((ai_result.get('risk_factors') or '') +
+                                 ' [CAPPED: Hub shows %g but %g already claimed by '
+                                 'in-flight transfers - %g can still ship]'
+                                 % (hub_available, hub_available - hub_cap, hub_cap))
+    try:
+      log_action(conn, 'AI_QTY_HUB_EFFECTIVE_CAP', candidate.get('sku'),
+                 '%g' % min(ai_qty, ceiling), '%g' % rec_qty,
+                 'hub_available %g, hub_effective_on_hand %g'
+                 % (hub_available, float(_eff)))
+    except Exception:
+      pass
   if ai_qty > ceiling + 0.0001 and rec_qty < ai_qty:
     ai_result['recommended_qty'] = rec_qty
     ai_result['risk_factors'] = ((ai_result.get('risk_factors') or '') +
@@ -1608,26 +1647,28 @@ def mark_stale_recommendations_obsolete(conn, batch_id):
   cursor.execute(find_stale_query)
   stale_records = list(cursor.fetchall())
 
-  if not stale_records:
-    return {'obsoleted': 0, 'skus': []}
+  # v5.36.3: no early return here - sweeps 1b, 2 and 3 below must run every
+  # batch, not only when a SKU has just left the view.
 
   # v5.6: Pre-compute committed qty per SKU so we can classify the obsolete
   # reason in a single round-trip instead of N+1 queries.
   stale_skus = list({r['sku'] for r in stale_records})
-  placeholders = ','.join(['%s'] * len(stale_skus))
-  committed_query = (
-    "SELECT sku, "
-    "       SUM(COALESCE(manager_override_qty, ai_recommended_qty, "
-    "                    calculated_transfer_qty)) AS committed_qty "
-    "FROM dbo.ai_transfer_recommendations "
-    "WHERE (status IN ('Auto-Approved', 'Approved', 'Applied', 'Trip_Assigned', 'Finalized') "
-    "       OR (status = 'Delivered' AND reviewed_date > DATEADD(hour, -48, GETDATE()))) "
-    "  AND sku IN (" + placeholders + ") "
-    "GROUP BY sku"
-  )
-  cursor.execute(committed_query, tuple(stale_skus))
-  committed_by_sku = {row['sku']: (row['committed_qty'] or 0)
-                      for row in cursor.fetchall()}
+  committed_by_sku = {}
+  if stale_skus:
+    placeholders = ','.join(['%s'] * len(stale_skus))
+    committed_query = (
+      "SELECT sku, "
+      "       SUM(COALESCE(manager_override_qty, ai_recommended_qty, "
+      "                    calculated_transfer_qty)) AS committed_qty "
+      "FROM dbo.ai_transfer_recommendations "
+      "WHERE (status IN ('Auto-Approved', 'Approved', 'Applied', 'Trip_Assigned', 'Finalized') "
+      "       OR (status = 'Delivered' AND reviewed_date > DATEADD(hour, -48, GETDATE()))) "
+      "  AND sku IN (" + placeholders + ") "
+      "GROUP BY sku"
+    )
+    cursor.execute(committed_query, tuple(stale_skus))
+    committed_by_sku = {row['sku']: (row['committed_qty'] or 0)
+                        for row in cursor.fetchall()}
 
   obsoleted_skus = []
   timestamp = _db_stamp(conn)   # v5.36.2: DB time
@@ -1703,6 +1744,93 @@ def mark_stale_recommendations_obsolete(conn, batch_id):
     obsoleted_skus.append(sku)
 
   conn.commit()
+
+  # ─────────────────────────────────────────────────────────────────────
+  # v5.36.3: SWEEP 1b — Hub supply exhausted
+  # ─────────────────────────────────────────────────────────────────────
+  # Sweep 1 retires a rec whose SKU no longer needs a transfer. This one
+  # retires a rec whose SKU still needs one but whose Hub stock is GONE
+  # (view hub_available <= 0). Such a SKU is not a review candidate
+  # (suggested_transfer_qty is 0), so until now the rec was never touched,
+  # never re-reviewed and never obsoleted: it sat on the Transfer Form
+  # showing the Hub numbers it was raised with. 2026-10-16..19: recs 4983
+  # (YS58D0800) and 4986 (YS80SS0150) showed Hub 56 / 37 for three days
+  # after picks 703 / 704 had emptied the Hub, were approved on those
+  # numbers, and pick 727 asked for 22 units that did not exist.
+  # The rec is obsoleted (Pending AND Paused - a snoozed request the Hub
+  # cannot fill is not a decision worth parking); a new rec is raised by
+  # the normal path when Hub stock arrives.
+  hub_gone_obsoleted = []
+  try:
+    cursor.execute("""
+        SELECT r.recommendation_id, r.sku, r.status, r.notes,
+               r.hub_on_hand AS rec_hub_on_hand,
+               COALESCE(r.[manager_override_qty ], r.ai_recommended_qty,
+                        r.calculated_transfer_qty, 0) AS prev_qty,
+               v.hub_on_hand AS view_hub_on_hand,
+               v.hub_available AS view_hub_available,
+               v.starlite_available AS view_starlite_available,
+               v.total_demand AS view_total_demand
+        FROM dbo.ai_transfer_recommendations r
+        JOIN dbo.vw_unified_transfer_detection v ON v.sku = r.sku
+        WHERE r.status IN ('Pending', 'Paused')
+          AND v.transfer_needed = 'Yes'
+          AND ISNULL(v.hub_available, 0) <= 0
+    """)
+    hub_gone_records = list(cursor.fetchall())
+  except Exception as hge:
+    conn.rollback()
+    print('[Stale Sweep 1b] query failed: %s' % hge)
+    hub_gone_records = []
+
+  if hub_gone_records:
+    timestamp_hg = _db_stamp(conn)
+    _seen = set()
+    for record in hub_gone_records:
+      rec_id = record['recommendation_id']
+      if rec_id in _seen:          # the view can carry a SKU more than once
+        continue
+      _seen.add(rec_id)
+      sku = record['sku']
+      prev_status = record['status']
+      prev_qty = record['prev_qty'] or 0
+      reason_human = (
+        "Hub supply exhausted: e21 shows the Hub at %s on hand (%s available) "
+        "while Starlite still needs this SKU (available %s, demand %s). This rec "
+        "was raised when the Hub had %s. Nothing to ship; a new rec is raised "
+        "when Hub stock arrives."
+        % (record['view_hub_on_hand'], record['view_hub_available'],
+           record['view_starlite_available'], record['view_total_demand'],
+           record['rec_hub_on_hand']))
+      obsolete_note = (
+        "[" + timestamp_hg + "] OBSOLETE (Hub_Supply_Exhausted): " + reason_human +
+        " Prev status: " + str(prev_status) + ", Prev qty: " + str(prev_qty))
+      existing_notes = record['notes'] or ''
+      new_notes = (existing_notes + '\n' + obsolete_note) if existing_notes else obsolete_note
+      cursor.execute("""
+        UPDATE dbo.ai_transfer_recommendations
+        SET status = 'Obsolete',
+            reviewed_by = 'SYSTEM',
+            reviewed_date = GETDATE(),
+            snooze_until = NULL,
+            batch_id = %s,
+            notes = %s
+        WHERE recommendation_id = %s
+          AND status IN ('Pending', 'Paused')
+      """, (batch_id, new_notes, rec_id))
+      if cursor.rowcount != 1:
+        print('[Stale Sweep 1b] rec %s changed status mid-sweep - skipped' % rec_id)
+        continue
+      try:
+        log_action(conn, 'Obsolete_Hub_Supply_Exhausted', sku,
+                   str(prev_qty) + ' (' + str(prev_status) + ')', '0',
+                   reason_human + ' Batch:' + batch_id)
+      except Exception:
+        pass
+      hub_gone_obsoleted.append(sku)
+    conn.commit()
+    print('[Stale Sweep 1b] Hub supply exhausted: obsoleted %d rec(s): %s'
+          % (len(hub_gone_obsoleted), ', '.join(hub_gone_obsoleted)))
 
   # ─────────────────────────────────────────────────────────────────────
   # v5.12: SECOND SWEEP — stale qty=0 Applied/Auto-Approved cleanup
@@ -1930,12 +2058,13 @@ def mark_stale_recommendations_obsolete(conn, batch_id):
     conn.commit()
 
   # Combine all sweep results so callers see one unified count.
-  all_obsoleted_skus = obsoleted_skus + zero_qty_obsoleted + stranded_obsoleted
+  all_obsoleted_skus = obsoleted_skus + hub_gone_obsoleted + zero_qty_obsoleted + stranded_obsoleted
 
   return {
     'obsoleted': len(all_obsoleted_skus),
     'skus': all_obsoleted_skus,
     'not_in_view_obsoleted': len(obsoleted_skus),
+    'hub_supply_exhausted_obsoleted': len(hub_gone_obsoleted),   # v5.36.3
     'stale_zero_qty_obsoleted': len(zero_qty_obsoleted),
     'stranded_applied_obsoleted': len(stranded_obsoleted),
   }
