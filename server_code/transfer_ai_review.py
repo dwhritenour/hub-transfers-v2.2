@@ -253,9 +253,15 @@ This ensures the Hub Manager always sees current data when reviewing.
 #                        short-circuit makes them unreachable for the
 #                        cases that matter.
 # =============================================================================
-__version__       = "5.36.3"
-__version_date__  = "2026-10-20"
+__version__       = "5.37.0"
+__version_date__  = "2026-10-25"
 __version_notes__ = (
+  "5.37.0 (2026-10-25, PAUSE alongside SNOOZE): a Paused rec with pause_kind "
+  "'pause' (one-click Pause, stays on the Transfer Form) is handled exactly like "
+  "a Pending rec - candidate, touched, AI re-reviewed on the normal gate, "
+  "obsoleted by sweeps 1/1b - and is NEVER woken early (that rule is for "
+  "snoozes). Snoozes (pause_kind 'snooze' or NULL) behave as in 5.36.x. "
+  "get_last_review_stats reports paused and snoozed separately. "
   "5.36.3 (2026-10-20, pick 727 / YS58D0800 + YS80SS0150): (a) a Pending or "
   "Paused rec whose SKU still needs a transfer but whose Hub stock is gone "
   "(view hub_available <= 0) is obsoleted with reason Hub_Supply_Exhausted. "
@@ -1164,7 +1170,7 @@ def get_existing_recommendation(conn, sku):
            has_duplicate_warning,
            calculated_transfer_qty, time_urgency, inventory_urgency,
            event_type, total_demand, hub_available, starlite_available,
-           e21_in_transit_qty, snooze_until,
+           e21_in_transit_qty, snooze_until, pause_kind,
            LEFT(CAST(reasoning AS nvarchar(max)), 400) AS reasoning_head
     FROM dbo.ai_transfer_recommendations
     WHERE sku = %s
@@ -1195,6 +1201,7 @@ def get_existing_recommendation(conn, sku):
       'reviewed_date': row['reviewed_date'],               # last human action
       'paused_date': row['paused_date'],
       'snooze_until': row['snooze_until'],                 # v5.36.1
+      'pause_kind': row['pause_kind'],
       'has_duplicate_warning': bool(row['has_duplicate_warning']),
       'old_values': {
         'ai_recommended_qty': float(row['ai_recommended_qty'] or 0),
@@ -1210,7 +1217,7 @@ def get_existing_recommendation(conn, sku):
       },
     }
 
-  return {'exists': False, 'recommendation_id': None, 'status': None, 'previous_ai_qty': None}
+  return {'exists': False, 'recommendation_id': None, 'status': None, 'previous_ai_qty': None, 'pause_kind': None}
 
 
 # =============================================================================
@@ -1298,7 +1305,9 @@ def _ai_review_decision(existing, candidate, gate, reviews_so_far, now):
   """
   if not existing['exists']:
     return 'review', 'new'
-  if gate['ai_skip_paused'] >= 1 and existing['status'] == 'Paused':
+  # 5.37: a one-click Pause ('pause') is reviewed like Pending.
+  if gate['ai_skip_paused'] >= 1 and existing['status'] == 'Paused' \
+     and existing.get('pause_kind') != 'pause':
     return 'touch', 'paused'
   rd = existing.get('recommendation_date')
   hd = existing.get('reviewed_date')
@@ -3772,8 +3781,10 @@ def _run_transfer_review_body():
       # the numbers it was snoozed on; otherwise leave it exactly as it is
       # (no touch - the stored snapshot IS the baseline; the Snoozed form
       # shows live numbers from the view).
+      # 5.37: pause_kind 'pause' skips this block and goes through the normal
+      # gate below (touched / re-reviewed like Pending, never woken early).
       # ─────────────────────────────────────────────────────────────────
-      if existing['exists'] and existing['status'] == 'Paused':
+      if existing['exists'] and existing['status'] == 'Paused' and existing.get('pause_kind') != 'pause':
         why = None
         try:
           why = _snooze_early_wake_reason(existing, candidate, gate)
@@ -4171,10 +4182,15 @@ def get_last_review_stats():
 
     # Get current counts by status (not just from the last batch)
     cursor.execute("""
-        SELECT status, COUNT(*) as count
+        SELECT CASE WHEN status = 'Paused' AND pause_kind = 'pause' THEN 'PausedHold'
+                    WHEN status = 'Paused' THEN 'Paused'
+                    ELSE status END AS status,
+               COUNT(*) AS count
         FROM dbo.ai_transfer_recommendations
         WHERE status IN ('Pending', 'Auto-Approved', 'Approved', 'Applied', 'Paused')
-        GROUP BY status
+        GROUP BY CASE WHEN status = 'Paused' AND pause_kind = 'pause' THEN 'PausedHold'
+                      WHEN status = 'Paused' THEN 'Paused'
+                      ELSE status END
     """)
 
     counts = {}
@@ -4192,7 +4208,8 @@ def get_last_review_stats():
       'pending': counts.get('Pending', 0),
       'approved': counts.get('Approved', 0),
       'applied': counts.get('Applied', 0),
-      'paused': counts.get('Paused', 0)
+      'paused': counts.get('Paused', 0),
+      'paused_hold': counts.get('PausedHold', 0)
     }
 
   except Exception as e:

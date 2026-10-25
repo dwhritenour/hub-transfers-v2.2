@@ -17,6 +17,15 @@ Project: Titan Flow Control - Year of Automation
 Created: January 2026
 
 Changelog
+  2026-10-25 (PAUSE alongside SNOOZE):
+    - One-click PAUSE returns alongside Snooze using pause_kind ('pause' vs
+      'snooze', migration 115). _snooze_rec stamps pause_kind = 'snooze' on
+      both whole and split paths; wake/reject paths clear pause_kind = NULL.
+      get_snoozed_transfers filters to ISNULL(pause_kind, 'snooze') = 'snooze',
+      while get_pending_transfers returns Pending + (Paused AND pause_kind =
+      'pause') with paused rows sorted below Pending. Added _pause_rec /
+      _resume_rec, pause_transfer / resume_transfer callables, and Pause /
+      Resume branches in update_decision and bulk_update_decisions.
   2026-09-23 (v2.2 SNOOZE + ORDER HOLD, Hub Manager request on SO 610353):
     - ORDER HOLD: every pending row carries order_hold_qty / order_hold_text
       ("ORDER HOLD: 30 on SO 610353-001, 6 on SO 609449-001 (36 of 37 on
@@ -377,6 +386,7 @@ def _snooze_rec(conn, recommendation_id, snooze_qty, snooze_until, reason,
     cur.execute("""
         UPDATE dbo.ai_transfer_recommendations
         SET status = 'Paused',
+            pause_kind = 'snooze',
             paused_date = GETDATE(),
             pause_reason = %s,
             snooze_until = %s,
@@ -434,7 +444,7 @@ def _snooze_rec(conn, recommendation_id, snooze_qty, snooze_until, reason,
           calculated_transfer_qty, ai_recommended_qty, [manager_override_qty ],
           confidence_level, reasoning, seasonal_consideration, risk_factors,
           recommendation_date, status, batch_id, created_by, has_duplicate_warning,
-          paused_date, pause_reason, snooze_until, reviewed_by, reviewed_date, notes
+          paused_date, pause_reason, snooze_until, reviewed_by, reviewed_date, notes, pause_kind
       )
       OUTPUT INSERTED.recommendation_id
       SELECT sku, event_type, base_urgency,
@@ -450,7 +460,7 @@ def _snooze_rec(conn, recommendation_id, snooze_qty, snooze_until, reason,
              CONCAT(%s, CHAR(10), CHAR(10), ISNULL(CAST(reasoning AS nvarchar(max)), '')),
              seasonal_consideration, risk_factors,
              recommendation_date, 'Paused', batch_id, 'snooze_split', has_duplicate_warning,
-             GETDATE(), %s, %s, %s, GETDATE(), %s
+             GETDATE(), %s, %s, %s, GETDATE(), %s, 'snooze'
       FROM dbo.ai_transfer_recommendations
       WHERE recommendation_id = %s
   """, (parked, parked, parked,
@@ -480,6 +490,72 @@ def _snooze_rec(conn, recommendation_id, snooze_qty, snooze_until, reason,
           'snoozed_rec_id': new_id, 'until': until_txt}
 
 
+def _pause_rec(conn, recommendation_id, reviewed_by=_HUB_MANAGER):
+  """One-click PAUSE: whole rec, no date, no reason. Pending -> Paused/'pause'.
+  Stays on the Transfer Form; nothing wakes it but Resume."""
+  cur = conn.cursor()
+  cur.execute("""
+      SELECT sku, status FROM dbo.ai_transfer_recommendations
+      WHERE recommendation_id = %s
+  """, (recommendation_id,))
+  rec = cur.fetchone()
+  if not rec:
+    raise Exception("Rec %s not found." % recommendation_id)
+  if rec['status'] != 'Pending':
+    raise Exception("Rec %s is %s, not Pending - refresh the list." % (recommendation_id, rec['status']))
+  stamp = _db_stamp(conn)
+  cur.execute("""
+      UPDATE dbo.ai_transfer_recommendations
+      SET status = 'Paused',
+          pause_kind = 'pause',
+          paused_date = GETDATE(),
+          pause_reason = NULL,
+          snooze_until = NULL,
+          reviewed_by = %s,
+          reviewed_date = GETDATE(),
+          notes = CONCAT(ISNULL(CAST(notes AS nvarchar(max)), ''), %s)
+      WHERE recommendation_id = %s AND status = 'Pending'
+  """, (reviewed_by, ' | [%s] Paused' % stamp, recommendation_id))
+  if cur.rowcount != 1:
+    raise Exception("Rec %s moved while you were deciding - refresh the list." % recommendation_id)
+  _log_agent(conn, 'REC_PAUSED', rec['sku'], 'rec %s Pending' % recommendation_id,
+             'Paused (pause)', 'one-click pause', executed_by=reviewed_by)
+  return {'recommendation_id': recommendation_id, 'sku': rec['sku']}
+
+
+def _resume_rec(conn, recommendation_id, reviewed_by=_HUB_MANAGER):
+  """RESUME a paused rec: Paused/'pause' -> Pending. reviewed_date is stamped
+  so the detector's gate re-reviews it with fresh numbers on the next batch."""
+  cur = conn.cursor()
+  cur.execute("""
+      SELECT sku, status, pause_kind, paused_date FROM dbo.ai_transfer_recommendations
+      WHERE recommendation_id = %s
+  """, (recommendation_id,))
+  rec = cur.fetchone()
+  if not rec:
+    raise Exception("Rec %s not found." % recommendation_id)
+  if rec['status'] != 'Paused' or rec['pause_kind'] != 'pause':
+    raise Exception("Rec %s is not paused (it is %s%s) - refresh the list."
+                    % (recommendation_id, rec['status'],
+                       '/' + rec['pause_kind'] if rec['pause_kind'] else ''))
+  stamp = _db_stamp(conn)
+  cur.execute("""
+      UPDATE dbo.ai_transfer_recommendations
+      SET status = 'Pending',
+          pause_kind = NULL,
+          snooze_until = NULL,
+          reviewed_by = %s,
+          reviewed_date = GETDATE(),
+          notes = CONCAT(ISNULL(CAST(notes AS nvarchar(max)), ''), %s)
+      WHERE recommendation_id = %s AND status = 'Paused' AND pause_kind = 'pause'
+  """, (reviewed_by, ' | [%s] Resumed - back to Pending' % stamp, recommendation_id))
+  if cur.rowcount != 1:
+    raise Exception("Rec %s moved while you were deciding - refresh the list." % recommendation_id)
+  _log_agent(conn, 'REC_RESUMED', rec['sku'], 'rec %s Paused (pause)' % recommendation_id,
+             'Pending', 'resumed by hand', executed_by=reviewed_by)
+  return {'recommendation_id': recommendation_id, 'sku': rec['sku']}
+
+
 def wake_expired_snoozes(conn, performed_by='snooze_expired'):
   """Paused recs whose snooze_until has arrived go back to Pending.
   reviewed_date is stamped (> recommendation_date) so the AI re-review
@@ -502,6 +578,7 @@ def wake_expired_snoozes(conn, performed_by='snooze_expired'):
     cur.execute("""
         UPDATE dbo.ai_transfer_recommendations
         SET status = 'Pending',
+            pause_kind = NULL,
             snooze_until = NULL,
             reviewed_by = %s,
             reviewed_date = GETDATE(),
@@ -529,6 +606,36 @@ def snooze_transfer(recommendation_id, snooze_qty=None, snooze_until=None,
     conn.commit()
     result['status'] = 'success'
     return result
+  except Exception as e:
+    conn.rollback()
+    return {'status': 'error', 'message': str(e)}
+  finally:
+    conn.close()
+
+
+@anvil.server.callable
+def pause_transfer(recommendation_id, reviewed_by=_HUB_MANAGER):
+  conn = get_connection()
+  try:
+    r = _pause_rec(conn, recommendation_id, reviewed_by)
+    conn.commit()
+    r['status'] = 'success'
+    return r
+  except Exception as e:
+    conn.rollback()
+    return {'status': 'error', 'message': str(e)}
+  finally:
+    conn.close()
+
+
+@anvil.server.callable
+def resume_transfer(recommendation_id, reviewed_by=_HUB_MANAGER):
+  conn = get_connection()
+  try:
+    r = _resume_rec(conn, recommendation_id, reviewed_by)
+    conn.commit()
+    r['status'] = 'success'
+    return r
   except Exception as e:
     conn.rollback()
     return {'status': 'error', 'message': str(e)}
@@ -569,7 +676,7 @@ def get_snoozed_transfers():
         LEFT JOIN dbo.part_specs ps ON ps.sku = r.sku
         LEFT JOIN dbo.vw_unified_transfer_detection v
                ON v.sku = r.sku AND v.transfer_needed = 'Yes'
-        WHERE r.status = 'Paused'
+        WHERE r.status = 'Paused' AND ISNULL(r.pause_kind, 'snooze') = 'snooze'
         ORDER BY CASE WHEN r.snooze_until IS NULL THEN 1 ELSE 0 END,
                  r.snooze_until, r.paused_date, r.sku
     """)
@@ -592,6 +699,7 @@ def wake_snoozed(recommendation_id, note=None, reviewed_by=_HUB_MANAGER):
     cur.execute("""
         UPDATE dbo.ai_transfer_recommendations
         SET status = 'Pending',
+            pause_kind = NULL,
             snooze_until = NULL,
             reviewed_by = %s,
             reviewed_date = GETDATE(),
@@ -666,6 +774,7 @@ def reject_snoozed(recommendation_id, note=None, reviewed_by=_HUB_MANAGER):
     cur.execute("""
         UPDATE dbo.ai_transfer_recommendations
         SET status = 'Rejected',
+            pause_kind = NULL,
             snooze_until = NULL,
             reviewed_by = %s,
             reviewed_date = GETDATE(),
@@ -702,7 +811,7 @@ def reject_snoozed(recommendation_id, note=None, reviewed_by=_HUB_MANAGER):
 @anvil.server.callable
 def get_pending_transfers():
   """
-    Retrieve all pending transfer recommendations for the DataGrid.
+    Retrieve all pending + paused transfer recommendations for the DataGrid.
 
     Returns:
         dict: {
@@ -750,11 +859,14 @@ def get_pending_transfers():
             recommendation_date,
             notes,
             paused_date,
+            pause_kind,
             DATEDIFF(day, paused_date, GETDATE()) AS days_paused,
             ISNULL(has_duplicate_warning, 0) AS has_duplicate_warning
         FROM dbo.ai_transfer_recommendations
-        WHERE status = 'Pending'            -- v2.2: snoozed (Paused) recs live on #snoozed
+        WHERE status = 'Pending'
+           OR (status = 'Paused' AND pause_kind = 'pause')   -- 2026-10-25: paused stays on the form
         ORDER BY
+            CASE WHEN status = 'Paused' THEN 2 ELSE 1 END,          -- paused sink below pending
             CASE WHEN ISNULL(has_duplicate_warning, 0) = 1 THEN 1 ELSE 2 END,  -- v5.5: duplicate warnings first
             CASE inventory_urgency
                 WHEN 'CRITICAL' THEN 1
@@ -856,7 +968,7 @@ def update_decision(recommendation_id, decision, transfer_qty=None, notes=None, 
 
     Args:
         recommendation_id: The ID of the recommendation to update
-        decision: 'Approved', 'Rejected', 'Paused', or 'Pending'
+        decision: 'Approved', 'Rejected', 'Paused' (=Snooze), 'Pause', 'Resume'
         transfer_qty: Optional override quantity (saved to manager_override_qty)
         notes: Optional notes from reviewer
         pause_reason: Reason for pausing (required if decision='Paused')
@@ -925,12 +1037,21 @@ def update_decision(recommendation_id, decision, transfer_qty=None, notes=None, 
       conn.close()
       return {'status': 'success',
               'message': 'Snoozed recommendation %s (%s)' % (recommendation_id, r['sku'])}
+    elif decision == 'Pause':
+      r = _pause_rec(conn, recommendation_id, reviewed_by)
+      conn.commit(); conn.close()
+      return {'status': 'success', 'message': 'Paused recommendation %s (%s)' % (recommendation_id, r['sku'])}
+    elif decision == 'Resume':
+      r = _resume_rec(conn, recommendation_id, reviewed_by)
+      conn.commit(); conn.close()
+      return {'status': 'success', 'message': 'Resumed recommendation %s (%s)' % (recommendation_id, r['sku'])}
 
     # Handle Approved/Rejected with optional quantity override
     elif transfer_qty is not None:
       query = """
                 UPDATE dbo.ai_transfer_recommendations
                 SET status = %s,
+                    pause_kind = NULL,
                     manager_override_qty = %s,
                     notes = %s,
                     reviewed_by = %s,
@@ -944,6 +1065,7 @@ def update_decision(recommendation_id, decision, transfer_qty=None, notes=None, 
       query = """
                 UPDATE dbo.ai_transfer_recommendations
                 SET status = %s,
+                    pause_kind = NULL,
                     notes = %s,
                     reviewed_by = %s,
                     reviewed_date = GETDATE()
@@ -989,6 +1111,8 @@ def bulk_update_decisions(updates):
   updated_count = 0
   blocked_zero_qty = []  # v2.0.1: recs refused because effective qty <= 0
   snoozed = []           # v2.2: {'sku', 'mode', 'ship_qty', 'snooze_qty', 'until'}
+  paused = []
+  resumed = []
   snooze_errors = []     # v2.2: {'recommendation_id', 'message'}
 
   try:
@@ -1017,6 +1141,7 @@ def bulk_update_decisions(updates):
         cursor.execute("""
                     UPDATE dbo.ai_transfer_recommendations
                     SET status = 'Approved',
+                        pause_kind = NULL,
                         reviewed_by = 'Hub_Manager',
                         reviewed_date = GETDATE(),
                         -- 2026-09-05 (H3): keep the existing override when the
@@ -1038,6 +1163,7 @@ def bulk_update_decisions(updates):
         cursor.execute("""
                     UPDATE dbo.ai_transfer_recommendations
                     SET status = 'Rejected',
+                        pause_kind = NULL,
                         reviewed_by = 'Hub_Manager',
                         reviewed_date = GETDATE(),
                         snooze_until = %s
@@ -1063,6 +1189,18 @@ def bulk_update_decisions(updates):
             raise
           snooze_errors.append({'recommendation_id': rec_id, 'message': str(se)})
         continue
+      elif decision in ('Pause', 'Resume'):
+        try:
+          if decision == 'Pause':
+            r = _pause_rec(conn, rec_id, 'Hub_Manager'); paused.append(r)
+          else:
+            r = _resume_rec(conn, rec_id, 'Hub_Manager'); resumed.append(r)
+          updated_count += 1
+        except Exception as pe:
+          if 'moved while you were deciding' in str(pe):
+            raise
+          snooze_errors.append({'recommendation_id': rec_id, 'message': str(pe)})
+        continue
 
       updated_count += cursor.rowcount
 
@@ -1083,6 +1221,8 @@ def bulk_update_decisions(updates):
             'skipped_guarded': max(0, len(updates) - updated_count),
             'blocked_zero_qty': blocked_zero_qty,
             'snoozed': snoozed,
+            'paused': paused,
+            'resumed': resumed,
             'snooze_errors': snooze_errors,
             'message': _blocked_msg}
 

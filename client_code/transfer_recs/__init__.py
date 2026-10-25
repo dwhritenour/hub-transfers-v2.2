@@ -17,7 +17,15 @@ import anvil.server
 # = rows whose demand is partly on Hold-status sales orders (the red ORDER
 # HOLD line). Apply sends Snooze decisions (amount / until / reason from the
 # row's dialog) and reports what shipped and what was parked.
-_STATUS_FILTERS = ['All', 'Warned', 'Order Hold']
+#
+# 2026-10-25 (PAUSE alongside SNOOZE): one-click paused recs (status='Paused',
+# pause_kind='pause') stay on this form below Pending rows. Status filter
+# restores 'Pending' and 'Paused'; optional dd_filter_urgency filters by
+# urgency rank; Apply handles 'Pause' and 'Resume' decisions; stats line
+# displays Paused and Snoozed counts separately.
+_STATUS_FILTERS = ['All', 'Pending', 'Paused', 'Warned', 'Order Hold']
+_URGENCY_FILTERS = ['All urgencies', 'Critical + High', 'Medium', 'Low']
+_URG_RANK = {'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'WARNING': 2, 'ELEVATED': 2, 'LOW': 1, 'NORMAL': 1}
 
 
 class transfer_recs(transfer_recsTemplate):
@@ -53,6 +61,10 @@ class transfer_recs(transfer_recsTemplate):
     self.tb_filter_sku.set_event_handler('change', self.filter_changed)
     self.tb_filter_sku.set_event_handler('pressed_enter', self.filter_changed)
     self.dd_filter_status.set_event_handler('change', self.filter_changed)
+    if hasattr(self, 'dd_filter_urgency'):
+      self.dd_filter_urgency.items = _URGENCY_FILTERS
+      self.dd_filter_urgency.selected_value = 'All urgencies'
+      self.dd_filter_urgency.set_event_handler('change', self.filter_changed)
     self.btn_filter_clear.set_event_handler('click', self.filter_clear_click)
 
     # Wire up event handlers
@@ -83,9 +95,16 @@ class transfer_recs(transfer_recsTemplate):
   # FILTERS
   # =========================================================================
 
+  def _urg_rank(self, r):
+    best = 0
+    for k in ('time_urgency', 'inventory_urgency'):
+      best = max(best, _URG_RANK.get(str(r.get(k) or '').strip().upper(), 0))
+    return best
+
   def _filter_active(self):
     return bool((self.tb_filter_sku.text or '').strip()) or \
-    (self.dd_filter_status.selected_value or 'All') != 'All'
+    (self.dd_filter_status.selected_value or 'All') != 'All' or \
+    (hasattr(self, 'dd_filter_urgency') and (self.dd_filter_urgency.selected_value or 'All urgencies') != 'All urgencies')
 
   def apply_filters(self):
     """Show the subset of self._all_rows matching the SKU text and status."""
@@ -99,13 +118,26 @@ class transfer_recs(transfer_recsTemplate):
         continue
       if status == 'Order Hold' and not r.get('order_hold_qty'):
         continue
+      if status == 'Pending' and r.get('status') != 'Pending':
+        continue
+      if status == 'Paused' and r.get('status') != 'Paused':
+        continue
+      urg = (self.dd_filter_urgency.selected_value if hasattr(self, 'dd_filter_urgency') else None) or 'All urgencies'
+      rank = self._urg_rank(r)
+      if urg == 'Critical + High' and rank < 3:
+        continue
+      if urg == 'Medium' and rank != 2:
+        continue
+      if urg == 'Low' and rank > 1:
+        continue
       rows.append(r)
     self.rp_transfers.items = rows
     total = len(self._all_rows)
     if self._filter_active():
       self.lbl_filter_count.text = "Showing %d of %d" % (len(rows), total)
     else:
-      self.lbl_filter_count.text = "%d open" % total
+      paused = sum(1 for r in self._all_rows if r.get('status') == 'Paused')
+      self.lbl_filter_count.text = "%d open (%d paused)" % (total, paused) if paused else "%d open" % total
 
   def filter_changed(self, **event_args):
     self.apply_filters()
@@ -113,6 +145,8 @@ class transfer_recs(transfer_recsTemplate):
   def filter_clear_click(self, **event_args):
     self.tb_filter_sku.text = ''
     self.dd_filter_status.selected_value = 'All'
+    if hasattr(self, 'dd_filter_urgency'):
+      self.dd_filter_urgency.selected_value = 'All urgencies'
     self.apply_filters()
 
 
@@ -155,6 +189,7 @@ class transfer_recs(transfer_recsTemplate):
         # Training mode: All items go to Pending for review
         self.lbl_stats.text = (
           f"Pending: {stats.get('pending', 0)} | "
+          f"Paused: {stats.get('paused_hold', 0)} | "
           f"Snoozed: {stats.get('paused', 0)} | "
           f"Approved: {stats.get('approved', 0)} | "
           f"Applied: {stats.get('applied', 0)}"
@@ -296,16 +331,16 @@ class transfer_recs(transfer_recsTemplate):
 
     for item in self._all_rows:
       decision = item.get('decision')
-      if decision in ('Approved', 'Rejected', 'Paused') and item['recommendation_id'] not in visible_ids:
+      if decision in ('Approved', 'Rejected', 'Paused', 'Pause', 'Resume') and item['recommendation_id'] not in visible_ids:
         hidden_decisions += 1
-      if decision in ('Approved', 'Rejected', 'Paused'):
+      if decision in ('Approved', 'Rejected', 'Paused', 'Pause', 'Resume'):
         update = {
           'recommendation_id': item['recommendation_id'],
           'decision': decision
         }
         # Include quantity override if provided
         qty_override = item.get('transfer_qty_override')
-        if qty_override is not None and decision != 'Paused':
+        if qty_override is not None and decision not in ('Paused', 'Pause', 'Resume'):
           update['transfer_qty'] = qty_override
         # v2.2: Snooze = decision 'Paused' + what the row's dialog collected.
         if decision == 'Paused':
@@ -316,17 +351,23 @@ class transfer_recs(transfer_recsTemplate):
         updates.append(update)
 
     if not updates:
-      alert("No decisions to apply. Please select Approve, Reject, or Snooze for at least one item.")
+      alert("No decisions to apply. Please select Approve, Reject, Snooze, Pause or Resume for at least one item.")
       return
 
       # Confirm with user
     approved_count = sum(1 for u in updates if u['decision'] == 'Approved')
     rejected_count = sum(1 for u in updates if u['decision'] == 'Rejected')
     paused_count = sum(1 for u in updates if u['decision'] == 'Paused')
+    pause_count  = sum(1 for u in updates if u['decision'] == 'Pause')
+    resume_count = sum(1 for u in updates if u['decision'] == 'Resume')
 
     confirm_msg = f"Apply {approved_count} approvals, {rejected_count} rejections"
     if paused_count > 0:
       confirm_msg += f", and {paused_count} snooze(s)"
+    if pause_count > 0:
+      confirm_msg += f", {pause_count} pause(s)"
+    if resume_count > 0:
+      confirm_msg += f", {resume_count} resume(s)"
     confirm_msg += "?"
     if hidden_decisions > 0:
       confirm_msg += (f"\n\n{hidden_decisions} of these decision(s) are on rows the "
@@ -357,8 +398,10 @@ class transfer_recs(transfer_recsTemplate):
     # v2.2: say what each snooze did (whole rec parked, or split: part
     # approved now + the rest parked on the Snoozed SKUs form).
     _snoozed = result.get('snoozed') or []
+    _paused = result.get('paused') or []
+    _resumed = result.get('resumed') or []
     _split_ship = sum(int(x.get('ship_qty') or 0) for x in _snoozed if x.get('mode') == 'split')
-    if _snoozed:
+    if _snoozed or _paused or _resumed:
       lines = []
       for x in _snoozed:
         if x.get('mode') == 'split':
@@ -368,7 +411,11 @@ class transfer_recs(transfer_recsTemplate):
         else:
           lines.append("%s: %d snoozed until %s"
                        % (x.get('sku'), int(x.get('snooze_qty') or 0), x.get('until')))
-      Notification("Snoozed - see the Snoozed SKUs form:\n" + "\n".join(lines),
+      for x in _paused:
+        lines.append("%s paused" % x.get('sku'))
+      for x in _resumed:
+        lines.append("%s resumed" % x.get('sku'))
+      Notification(("Snoozed - see the Snoozed SKUs form:\n" if _snoozed else "") + "\n".join(lines),
                    timeout=8).show()
     if result.get('snooze_errors'):
       alert(result.get('message') or 'Some snoozes were refused.')

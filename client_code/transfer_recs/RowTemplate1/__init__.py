@@ -3,6 +3,12 @@ RowTemplate1 - Transfer Recommendations Row Template  (Hub Transfers v2.2)
 =========================================================================
 Client-side code for individual rows in the DataGrid.
 
+2026-10-25 (PAUSE alongside SNOOZE):
+- Pending rows offer Approve / Reject / Snooze / Pause; paused rows
+  (status='Paused', pause_kind='pause') stay on the Transfer Form with
+  Resume / Approve / Reject / Snooze and a PAUSED Nd badge (amber < 5d,
+  light red >= 5d).
+
 2026-09-23 (v2.2 SNOOZE + ORDER HOLD):
 - The decision dropdown offers Approve / Reject / SNOOZE (items set here in
   code; the designer's [Approve, Reject, Pause] is overridden). Choosing
@@ -48,7 +54,11 @@ from anvil import *
 import anvil.server
 from datetime import date, timedelta
 
-_DECISIONS = ['Approve', 'Reject', 'Snooze']
+_DECISIONS = ['Approve', 'Reject', 'Snooze', 'Pause']          # a Pending row
+_DECISIONS_PAUSED = ['Resume', 'Approve', 'Reject', 'Snooze']  # a paused row
+_PAUSE_BG = '#FFF3CD'        # amber: paused, fresh
+_PAUSE_OLD_BG = '#FFCCCB'    # light red: paused 5+ days
+_PAUSE_OLD_DAYS = 5
 _HOLD_BG = '#FDE7E9'      # pink tint
 _HOLD_FG = '#8B0000'      # dark red
 
@@ -71,8 +81,8 @@ class RowTemplate1(RowTemplate1Template):
     self.init_components(**properties)
     self._display_qty = None          # what the qty box showed before a snooze
 
-    # v2.2: Snooze replaces Pause (designer items are overridden here).
-    self.dd_decision.items = _DECISIONS
+    self._is_paused = (self.item.get('status') == 'Paused' and self.item.get('pause_kind') == 'pause')
+    self.dd_decision.items = _DECISIONS_PAUSED if self._is_paused else _DECISIONS
 
     # -----------------------------------------------------------------
     # Color-code SKU based on status
@@ -80,13 +90,15 @@ class RowTemplate1(RowTemplate1Template):
     status = self.item.get('status')
     days_paused = self.item.get('days_paused')
 
-    if status == 'Paused':
-      if days_paused and days_paused > 3:
-        # Stale paused item - light red
-        self.txt_sku.background = '#FFCCCB'
-      else:
-        # Recently paused - light amber
-        self.txt_sku.background = '#FFF3CD'
+    if self._is_paused:
+      d = int(days_paused or 0)
+      old = d >= _PAUSE_OLD_DAYS
+      self.txt_sku.background = _PAUSE_OLD_BG if old else _PAUSE_BG
+      self.txt_status.text = 'PAUSED %dd' % d
+      self.txt_status.background = _PAUSE_OLD_BG if old else _PAUSE_BG
+      self.txt_status.tooltip = ('Paused %d day(s). Resume, Approve, Reject or Snooze it from the '
+                                 'dropdown. A pause older than %d days should have been a Snooze '
+                                 'or a Reject.' % (d, _PAUSE_OLD_DAYS))
 
     # -----------------------------------------------------------------
     # v5.5: Duplicate-warning highlight
@@ -148,7 +160,7 @@ class RowTemplate1(RowTemplate1Template):
     elif status == 'Rejected':
       self.dd_decision.selected_value = 'Reject'
     elif status == 'Paused':
-      self.dd_decision.selected_value = 'Snooze'
+      self.dd_decision.selected_value = None     # paused: no decision until the manager picks one
     else:
       self.dd_decision.selected_value = None  # Pending - no selection
 
@@ -207,12 +219,16 @@ class RowTemplate1(RowTemplate1Template):
         """
     selected = self.dd_decision.selected_value
 
-    if selected in ('Approve', 'Reject', None):
+    if selected in ('Approve', 'Reject', 'Pause', 'Resume', None):
       self._clear_snooze()
     if selected == 'Approve':
       self.item['decision'] = 'Approved'
     elif selected == 'Reject':
       self.item['decision'] = 'Rejected'
+    elif selected == 'Pause':
+      self.item['decision'] = 'Pause'
+    elif selected == 'Resume':
+      self.item['decision'] = 'Resume'
     elif selected == 'Snooze':
       if not self._snooze_dialog():
         # Cancelled: back to no decision.
@@ -249,8 +265,12 @@ class RowTemplate1(RowTemplate1Template):
       self.item[k] = None
     if self.item.get('_snoozed'):
       self.item['_snoozed'] = False
-      self.txt_status.text = str(self.item.get('status') or '')
-      self.txt_status.background = None
+      if getattr(self, '_is_paused', False):
+        self.txt_status.text = 'PAUSED %dd' % int(self.item.get('days_paused') or 0)
+        self.txt_status.background = (_PAUSE_OLD_BG if int(self.item.get('days_paused') or 0) >= _PAUSE_OLD_DAYS else _PAUSE_BG)
+      else:
+        self.txt_status.text = str(self.item.get('status') or '')
+        self.txt_status.background = None
       self.trans_qty.text = self._display_qty or ''
       self.trans_qty.tooltip = ''
 
