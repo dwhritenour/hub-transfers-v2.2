@@ -1,5 +1,5 @@
 """
-Transfer AI Review - Anvil Background Task
+Transfer AI Review - Anvil Background Task (pipe test 2026-10-25)
 ==========================================
 Ported from transfer_ai_review.py for Anvil scheduled execution.
 Uses centralized db_config for database and API connections.
