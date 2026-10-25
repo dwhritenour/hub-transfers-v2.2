@@ -1,0 +1,22 @@
+flowchart TD
+    A([Idea / problem]) --> B[Cowork: discuss, decide<br/>strategy, UI, data]
+    B --> C[Cowork writes SPEC.md<br/>into the repo root]
+    C --> D["You → Cursor:<br/>'Read SPEC.md and implement it.'"]
+    D --> E[Cursor: git pull origin master]
+    E --> F{All SPEC references<br/>resolve?}
+    F -- no --> G[Cursor reports,<br/>does NOT work around] --> B
+    F -- yes --> H[Cursor edits code<br/>py_compile · git add -A<br/>commit · push origin master]
+    H --> I[Anvil ingests origin/master<br/>seconds to a few minutes]
+    I --> J[Cowork reviews the commit diff<br/>against SPEC.md]
+    J --> K[You: green Run in Anvil editor<br/>smoke test on master]
+    K --> L{Pass?}
+    L -- no --> M["Cursor: 'git revert HEAD and push'<br/>(or fix forward via new SPEC)"] --> B
+    L -- yes --> N{Ready for<br/>shop floor?}
+    N -- not yet --> A
+    N -- yes --> O["Cursor: 'Release master to published'<br/>= git push origin master:published --force-with-lease"]
+    O --> P([Live app updated])
+
+    subgraph Anvil designer edits
+        Q[You change layout in Anvil designer] --> R["Anvil auto-commits<br/>'Edited <form>' to origin/master"]
+        R -.-> E
+    end
