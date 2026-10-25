@@ -66,13 +66,17 @@ components:
     type: ColumnPanel
   - components:
     - components:
-      - layout_properties: {width: 244.5}
+      - layout_properties: {width: 198.5}
         name: tb_filter_sku
         properties:
           margin: ['0', null, '0', null]
           placeholder: Enter Part or All of SKU...
         type: TextBox
-      - layout_properties: {width: 246.5}
+      - layout_properties: {width: 208}
+        name: dd_filter_urgency
+        properties: {}
+        type: DropDown
+      - layout_properties: {width: 215}
         name: dd_filter_status
         properties:
           margin: [null, null, '0', null]
