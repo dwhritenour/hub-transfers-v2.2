@@ -1,8 +1,8 @@
 # =============================================================================
 # trip_editor/__init__.py
 # -----------------------------------------------------------------------------
-# Version:       3.2.1
-# Last updated:  2026-08-30
+# Version:       3.2.2
+# Last updated:  2026-10-29
 # Hub Transfers v2.1 - Trip Editor v3: THE DOCK'S TOOL.
 #
 # Ruling (Dave, 2026-08-30): only dock personnel use the Trip Editor.
@@ -71,10 +71,14 @@
 # #dock URL hash BEFORE opening the startup form (transfer_recs routes
 # on the hash at startup; without clearing it, Home would bounce
 # straight back here).
+#
+# v3.2.2 (2026-10-29): removing the last line cancels the truck on the
+# server; the dock then returns to the staged list instead of showing
+# "0 of 0 loaded" with DEPART greyed (trip 1828).
 # =============================================================================
 
-__version__       = "3.2.1"
-__version_date__  = "2026-08-30"
+__version__       = "3.2.2"
+__version_date__  = "2026-10-29"
 
 from ._anvil_designer import trip_editorTemplate
 from anvil import *
@@ -337,11 +341,19 @@ class trip_editor(trip_editorTemplate):
     self.show_load(self.current_trip_id)
 
   def remove_line(self, assignment_id, reason, **event_args):
+    result = None
     try:
-      anvil.server.call('remove_line_from_truck', assignment_id,
-                        self.worker_code, reason)
+      result = anvil.server.call('remove_line_from_truck', assignment_id,
+                                 self.worker_code, reason)
     except Exception as e:
       alert(str(e))
+    if isinstance(result, dict) and result.get('truck_cancelled'):
+      Notification("That was the last line - truck %s is cancelled. The lines are back "
+                   "in the staged list; pick what else you need, then finalize a new truck."
+                   % result.get('trip_id'), timeout=8).show()
+      self.current_trip_id = None
+      self.enter_dock()
+      return
     self.show_load(self.current_trip_id)
 
   def manifest_click(self, **event_args):

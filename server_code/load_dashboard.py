@@ -65,9 +65,16 @@ get_hub_manager_phones,
 log_sms_notification,
 )
 
-__version__       = "1.4.0"
-__version_date__  = "2026-09-10"
+__version__       = "1.4.1"
+__version_date__  = "2026-10-29"
 __version_notes__ = (
+  "1.4.1 (2026-10-29): a truck whose LAST line is removed at load time cancels "
+  "itself (transfer_trips.status 'Cancelled', notes, ai_agent_log "
+  "TRUCK_CANCELLED_EMPTY) in the same transaction, and remove_line_from_truck "
+  "returns {'truck_cancelled': True, ...} so the dock returns to the staged list. "
+  "get_open_truck ignores a Finalized truck with no assignments. Trip 1828 "
+  "(2026-10-29 15:31): both lines removed to add parts, truck stranded on every "
+  "dock screen with '0 of 0 loaded' and DEPART greyed, cancelled by hand. "
   "1.4.0 (2026-09-10, Hub policy): dock location lookups exclude the ON "
   "HOLD location (global_parameters_text.hub_hold_location, default "
   "'100') and are deterministic - see pick_dashboard 1.4.0. "
@@ -286,6 +293,8 @@ def get_open_truck(worker_code):
     a truck is never stranded when its finalizer is unavailable (v1.3.0,
     review H9). D-6 (one open truck per finalizer) is enforced in
     finalize_truck, not here.
+    1.4.1: a Finalized truck with no assignments is not 'open' - it is
+    either mid-cancel or a leftover; the dock must not resume it.
     """
   conn = db_config.get_nexus_connection()
   try:
@@ -295,6 +304,8 @@ def get_open_truck(worker_code):
         SELECT TOP 1 trip_id FROM dbo.transfer_trips
         WHERE created_by = %s
           AND status = 'Finalized' AND shipped_date IS NULL
+          AND EXISTS (SELECT 1 FROM dbo.transfer_trip_assignments a
+                      WHERE a.trip_id = transfer_trips.trip_id)
         ORDER BY CASE WHEN finalized_by = %s THEN 0 ELSE 1 END, trip_id DESC
       """,
       (_KIOSK_CREATED_BY, worker_code)
@@ -330,6 +341,8 @@ def finalize_truck(worker_code, pick_line_ids, planned_date=None):
         SELECT TOP 1 trip_id FROM dbo.transfer_trips
         WHERE created_by = %s AND finalized_by = %s
           AND status = 'Finalized' AND shipped_date IS NULL
+          AND EXISTS (SELECT 1 FROM dbo.transfer_trip_assignments a
+                      WHERE a.trip_id = transfer_trips.trip_id)
       """,
       (_KIOSK_CREATED_BY, worker_code)
     )
@@ -742,6 +755,8 @@ def remove_line_from_truck(assignment_id, worker_code, reason):
     Take a line off the truck before departure. The assignment row is
     deleted, the line returns to STAGED, and the rec reverts
     Trip_Assigned -> Applied when nothing else holds it on a trip.
+    1.4.1: when the removed line was the last one the truck is cancelled
+    and the result says so.
     """
   if not reason:
     raise Exception("Removing a line needs a reason")
@@ -807,6 +822,36 @@ def remove_line_from_truck(assignment_id, worker_code, reason):
       (row['recommendation_id'], row['recommendation_id'])
     )
 
+    # 1.4.1: last line off -> the truck is empty. There is no depart or
+    # delete path for an empty truck (depart refuses it), so it cancels
+    # itself here and the dock goes back to the staged list.
+    cursor.execute(
+      "SELECT COUNT(*) AS n FROM dbo.transfer_trip_assignments WHERE trip_id = %s",
+      (row['trip_id'],)
+    )
+    remaining = int((cursor.fetchone() or {'n': 0})['n'] or 0)
+    truck_cancelled = False
+    if remaining == 0:
+      cursor.execute(
+        """
+          UPDATE dbo.transfer_trips
+          SET status = 'Cancelled',
+              sku_count = 0, total_volume_ft3 = 0, total_weight_lb = 0,
+              notes = CONCAT(ISNULL(CAST(notes AS nvarchar(max)), ''),
+                             ' | [', CONVERT(varchar(16), GETDATE(), 120),
+                             '] Cancelled: last line removed at load time by ', %s, ' (', %s, ')')
+          WHERE trip_id = %s AND status = 'Finalized' AND shipped_date IS NULL
+        """,
+        (worker_code, reason, row['trip_id'])
+      )
+      truck_cancelled = cursor.rowcount == 1
+      if truck_cancelled:
+        _log_agent_action(conn, 'TRUCK_CANCELLED_EMPTY', None,
+                          'Trip %s Finalized' % row['trip_id'], 'Cancelled',
+                          "Last line (%s) removed at load time by %s: %s - truck "
+                          "cancelled, lines are back in the staged list"
+                          % (row['sku'], worker_code, reason))
+
     _log_event(conn, row['pick_id'], 'LINE_REMOVED',
                pick_line_id=row['pick_line_id'], performed_by=worker_code,
                note='off trip %s: %s' % (row['trip_id'], reason))
@@ -814,7 +859,7 @@ def remove_line_from_truck(assignment_id, worker_code, reason):
                       'Trip %s' % row['trip_id'], 'Staged',
                       "Removed at load time by %s: %s" % (worker_code, reason))
     conn.commit()
-    return True
+    return {'ok': True, 'trip_id': row['trip_id'], 'truck_cancelled': truck_cancelled}
   finally:
     conn.close()
 
