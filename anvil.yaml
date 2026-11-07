@@ -11,19 +11,7 @@ runtime_options:
   server_persist: true
   server_spec: {base: python310-minimal}
   version: 3
-scheduled_tasks:
-- job_id: RUYKEMLH
-  task_name: run_transfer_review
-  time_spec:
-    at: {}
-    every: minute
-    n: 15
-- job_id: CPPTKCJC
-  task_name: run_pipeline_monitor
-  time_spec:
-    at: {}
-    every: minute
-    n: 10
+scheduled_tasks: []
 secrets:
   ANTHROPIC_API_KEY:
     type: secret
